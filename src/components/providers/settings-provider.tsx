@@ -3,11 +3,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Language = 'en' | 'ar';
+type QuranViewMode = 'list' | 'page';
 
 type Settings = {
   fontSize: number;
   prayerOffset: number;
   language: Language;
+  quranViewMode: QuranViewMode;
 };
 
 type SettingsProviderState = {
@@ -15,12 +17,14 @@ type SettingsProviderState = {
   setFontSize: (size: number) => void;
   setPrayerOffset: (offset: number) => void;
   setLanguage: (language: Language) => void;
+  setQuranViewMode: (mode: QuranViewMode) => void;
 };
 
 const defaultSettings: Settings = {
   fontSize: 16,
   prayerOffset: 0,
   language: 'en',
+  quranViewMode: 'list',
 };
 
 const SettingsProviderContext = createContext<SettingsProviderState>({
@@ -28,6 +32,7 @@ const SettingsProviderContext = createContext<SettingsProviderState>({
   setFontSize: () => null,
   setPrayerOffset: () => null,
   setLanguage: () => null,
+  setQuranViewMode: () => null,
 });
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
@@ -37,7 +42,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     try {
       const storedSettings = localStorage.getItem('app-settings');
       if (storedSettings) {
-        setSettings(JSON.parse(storedSettings));
+        // Merge stored settings with defaults to avoid breaking changes
+        setSettings(prev => ({ ...prev, ...JSON.parse(storedSettings) }));
       }
     } catch (error) {
       console.error("Could not load settings", error);
@@ -67,11 +73,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(s => ({...s, language }));
   };
 
+  const setQuranViewMode = (mode: QuranViewMode) => {
+    setSettings(s => ({ ...s, quranViewMode: mode }));
+  };
+
   const value = {
     settings,
     setFontSize,
     setPrayerOffset,
     setLanguage,
+    setQuranViewMode,
   };
 
   return (

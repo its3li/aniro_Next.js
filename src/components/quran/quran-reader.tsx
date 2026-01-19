@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import type { Surah, Verse } from '@/lib/quran';
@@ -13,16 +14,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TafseerModal } from './tafseer-modal';
+import { useSettings } from '../providers/settings-provider';
 
 interface QuranReaderProps {
   surah: Surah;
   onBack: () => void;
 }
 
-type ViewMode = 'list' | 'page';
-
 export function QuranReader({ surah, onBack }: QuranReaderProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const { settings, setQuranViewMode } = useSettings();
+  const { quranViewMode } = settings;
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [isTafseerOpen, setTafseerOpen] = useState(false);
 
@@ -58,22 +59,22 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
 
             <div className='flex items-center gap-2 bg-foreground/5 backdrop-blur-lg border-foreground/10 rounded-xl p-2'>
                 <Label htmlFor="view-mode-switch">
-                    <List className={viewMode === 'list' ? 'text-primary' : ''} />
+                    <List className={quranViewMode === 'list' ? 'text-primary' : ''} />
                 </Label>
                 <Switch
                     id="view-mode-switch"
-                    checked={viewMode === 'page'}
-                    onCheckedChange={(checked) => setViewMode(checked ? 'page' : 'list')}
+                    checked={quranViewMode === 'page'}
+                    onCheckedChange={(checked) => setQuranViewMode(checked ? 'page' : 'list')}
                 />
                  <Label htmlFor="view-mode-switch">
-                    <Book className={viewMode === 'page' ? 'text-primary' : ''}/>
+                    <Book className={quranViewMode === 'page' ? 'text-primary' : ''}/>
                  </Label>
             </div>
         </div>
       </header>
 
       <div className="p-4 md:p-6">
-        {viewMode === 'list' ? (
+        {quranViewMode === 'list' ? (
           <div className="flex flex-col gap-4">
             {surah.verses.map((verse) => (
               <div
