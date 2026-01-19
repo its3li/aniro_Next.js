@@ -84,3 +84,19 @@
     transform: translateY(0);
   }
 }
+
+/* Tajweed Styles */
+.ham_wasl, .slnt { color: #AAAAAA; }
+.madda_normal { color: #537FFF; }
+.madda_permissible { color: #4050FF; }
+.madda_necessary { color: #000EBC; }
+.qlq { color: #DD0008; }
+.madda_obligatory { color: #2144C1; }
+.ikhf_shfw { color: #D500B7; }
+.ikhf { color: #9400A8; }
+.idghm_shfw { color: #58B800; }
+.iqlb { color: #26BFFD; }
+.idgh_ghn { color: #169777; }
+.idgh_w_ghn { color: #169200; }
+.idgh_mus { color: #A1A1A1; }
+.ghn { color: #FF7E1E; }

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { TafseerModal } from './tafseer-modal';
 import { useSettings, type QuranEdition } from '../providers/settings-provider';
+import { parseTajweed } from '@/lib/tajweed';
 
 interface QuranReaderProps {
   surah: Surah;
@@ -88,7 +89,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
               >
                 <p className="text-right font-quran text-2xl leading-loose mb-4">
                   {quranEdition === 'tajweed' ? (
-                    <span dangerouslySetInnerHTML={{ __html: verse.text }} />
+                    <span dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
                   ) : (
                     verse.text
                   )}
@@ -106,7 +107,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
               {surah.verses.map(verse => (
                 <span key={verse.number.inSurah} onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }}>
                    {quranEdition === 'tajweed' ? (
-                    <span dangerouslySetInnerHTML={{ __html: verse.text }} />
+                    <span dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
                   ) : (
                     <span>{verse.text}</span>
                   )}
