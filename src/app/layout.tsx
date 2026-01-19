@@ -40,8 +40,8 @@ export default function RootLayout({
             <AudioPlayerProvider>
               <AuroraBackground>
                 <main className="pb-28">{children}</main>
-                <GlobalPlayer />
               </AuroraBackground>
+              <GlobalPlayer />
               <Toaster />
             </AudioPlayerProvider>
           </SettingsProvider>
