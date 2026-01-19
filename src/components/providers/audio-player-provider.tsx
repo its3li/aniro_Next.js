@@ -52,7 +52,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioQueueRef = useRef<{ verseKey: string; url: string }[]>([]);
-  const urlsToRevokeRef = useRef<string[]>([]);
   const isSeekingRef = useRef(false);
   const playerStateRef = useRef(playerState);
   const pendingActionRef = useRef<(() => void) | null>(null);
@@ -74,8 +73,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       audioRef.current.src = '';
     }
     audioQueueRef.current = [];
-    urlsToRevokeRef.current.forEach(URL.revokeObjectURL);
-    urlsToRevokeRef.current = [];
     isPlayingAudioRef.current = false;
   }, []);
 
@@ -102,13 +99,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
             if (!apiResponse.ok) return null;
             const data = await apiResponse.json();
             if (data.code !== 200 || !data.data.audio) return null;
-
-            const audioResponse = await fetch(data.data.audio);
-            if (!audioResponse.ok) return null;
-            const blob = await audioResponse.blob();
-            const blobUrl = URL.createObjectURL(blob);
             
-            return { verseKey: verseRef, url: blobUrl };
+            return { verseKey: verseRef, url: data.data.audio };
         } catch {
             return null;
         }
@@ -120,7 +112,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const newItems = results.filter(item => !existingKeys.has(item.verseKey));
     
     audioQueueRef.current.push(...newItems);
-    urlsToRevokeRef.current.push(...newItems.map(item => item.url));
 
   }, [quranReciter]);
 
@@ -324,3 +315,5 @@ export const useAudioPlayer = () => {
   if (context === null) throw new Error('useAudioPlayer must be used within a AudioPlayerProvider');
   return context;
 };
+
+    
