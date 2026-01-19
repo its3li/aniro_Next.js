@@ -1,4 +1,3 @@
-
 'use client';
 import { useAudioPlayer } from './providers/audio-player-provider';
 import { QuranAudioPlayer } from './quran/quran-audio-player';
@@ -22,7 +21,9 @@ export function GlobalPlayer() {
 
     return (
         <>
-            {playerState.showPlayer ? <QuranAudioPlayer /> : <BottomNav />}
+            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-50">
+                {playerState.showPlayer ? <QuranAudioPlayer /> : <BottomNav />}
+            </div>
             <ReciterSelectModal 
                 isOpen={isReciterModalOpen}
                 onClose={() => {
