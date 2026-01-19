@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Language = 'en' | 'ar';
 type QuranViewMode = 'list' | 'page';
-type QuranEdition = 'uthmani' | 'tajweed';
+export type QuranEdition = 'uthmani' | 'tajweed' | 'warsh' | 'shubah';
 
 type Settings = {
   fontSize: number;

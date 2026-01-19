@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TafseerModal } from './tafseer-modal';
-import { useSettings } from '../providers/settings-provider';
+import { useSettings, type QuranEdition } from '../providers/settings-provider';
 
 interface QuranReaderProps {
   surah: Surah;
@@ -48,13 +48,14 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
           <div className="w-10"></div>
         </div>
         <div className="flex items-center justify-between mt-4 gap-4">
-            <Select value={quranEdition} onValueChange={(value) => setQuranEdition(value as any)} dir={isArabic ? 'rtl' : 'ltr'}>
+            <Select value={quranEdition} onValueChange={(value) => setQuranEdition(value as QuranEdition)} dir={isArabic ? 'rtl' : 'ltr'}>
                 <SelectTrigger className="w-auto flex-1 bg-foreground/5 backdrop-blur-lg border-foreground/10 rounded-xl">
                     <SelectValue placeholder={isArabic ? "الرسم" : "Edition"} />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="uthmani">{isArabic ? "عثماني (حفص)" : "Uthmani (Hafs)"}</SelectItem>
+                    <SelectItem value="uthmani">{isArabic ? "حفص عن عاصم" : "Hafs 'an 'Asim"}</SelectItem>
                     <SelectItem value="warsh" disabled>{isArabic ? "ورش عن نافع" : "Warsh an-Nafi'"}</SelectItem>
+                    <SelectItem value="shubah" disabled>{isArabic ? "شعبة عن عاصم" : "Shu'bah 'an 'Asim"}</SelectItem>
                     <SelectItem value="tajweed">{isArabic ? "تجويد ملون" : "Color-coded Tajweed"}</SelectItem>
                 </SelectContent>
             </Select>
