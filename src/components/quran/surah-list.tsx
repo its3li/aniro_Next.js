@@ -1,10 +1,11 @@
 
 'use client';
-import { useState, useMemo } from 'react';
-import { surahs, type SurahInfo } from '@/lib/quran';
+import { useState, useMemo, useEffect } from 'react';
+import type { SurahInfo } from '@/lib/quran';
 import { Input } from '@/components/ui/input';
 import { GlassCard } from '../glass-card';
 import { useSettings } from '../providers/settings-provider';
+import { Skeleton } from '../ui/skeleton';
 
 interface SurahListProps {
   onSurahSelect: (surah: SurahInfo) => void;
@@ -12,10 +13,33 @@ interface SurahListProps {
 
 export function SurahList({ onSurahSelect }: SurahListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [surahs, setSurahs] = useState<SurahInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { settings } = useSettings();
   const isArabic = settings.language === 'ar';
 
+  useEffect(() => {
+    const fetchSurahs = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch('https://api.alquran.cloud/v1/surah');
+        if (!response.ok) {
+          throw new Error('Failed to fetch surahs');
+        }
+        const data = await response.json();
+        setSurahs(data.data);
+      } catch (error) {
+        console.error('Failed to load surah list:', error);
+        // Optionally, show a toast to the user
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSurahs();
+  }, []);
+
   const filteredSurahs = useMemo(() => {
+    if (!surahs.length) return [];
     if (!searchTerm) return surahs;
     return surahs.filter(
       (surah) =>
@@ -24,7 +48,20 @@ export function SurahList({ onSurahSelect }: SurahListProps) {
         surah.name.includes(searchTerm) ||
         String(surah.number) === searchTerm
     );
-  }, [searchTerm]);
+  }, [searchTerm, surahs]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <div className="flex flex-col gap-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+            ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -48,7 +85,7 @@ export function SurahList({ onSurahSelect }: SurahListProps) {
               </span>
               <div>
                 <p className="font-bold font-headline">{isArabic ? surah.name : surah.englishName}</p>
-                <p className="text-sm text-muted-foreground">{isArabic ? surah.englishName : surah.englishNameTranslation}</p>
+                <p className="text-sm text-muted-foreground">{surah.englishNameTranslation}</p>
               </div>
             </div>
             <div className="text-right">

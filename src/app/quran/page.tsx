@@ -7,7 +7,6 @@ import type { Surah, SurahInfo } from '@/lib/quran';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/components/providers/settings-provider';
-import { getSurahTajweed } from './actions';
 
 export default function QuranPage() {
   const [selectedSurahInfo, setSelectedSurahInfo] = useState<SurahInfo | null>(null);
@@ -26,59 +25,40 @@ export default function QuranPage() {
     const fetchSurah = async () => {
       setIsLoading(true);
       try {
-        const translationId = isArabic ? 20 : 131; // 20 for Tafsir Jalalayn (AR), 131 for Clear Quran (EN)
+        const quranEditionMap = {
+          uthmani: 'quran-uthmani',
+          tajweed: 'quran-tajweed',
+          warsh: 'quran-warsh',
+          shubah: 'quran-shouba', // This is a fallback, not supported by API
+        };
+        const selectedEdition = quranEditionMap[settings.quranEdition] || 'quran-uthmani';
+        // Use a tafsir for Arabic, and a simple translation for English.
+        const translationEdition = isArabic ? 'ar.jalalayn' : 'en.sahih';
 
-        if (settings.quranEdition === 'tajweed') {
-            // Fetch Tajweed from Quran Foundation and translations from quran.com
-            const [tajweedVerses, translationResponse] = await Promise.all([
-                getSurahTajweed(selectedSurahInfo.number),
-                fetch(`https://api.quran.com/api/v4/verses/by_chapter/${selectedSurahInfo.number}?language=en&translations=${translationId}&fields=text_uthmani&per_page=all`)
-            ]);
-            
-            if (!translationResponse.ok) {
-                throw new Error(`HTTP error! status: ${translationResponse.status}`);
-            }
-            const translationData = await translationResponse.json();
-
-            // Merge the two sources
-            const combinedVerses = tajweedVerses.map(tajweedVerse => {
-                const correspondingVerse = translationData.verses.find((v: any) => v.verse_number === tajweedVerse.id);
-                if (!correspondingVerse) return null;
-
-                return {
-                    number: { inQuran: correspondingVerse.id, inSurah: tajweedVerse.id },
-                    text: correspondingVerse.text_uthmani,
-                    text_uthmani_tajweed: tajweedVerse.text_uthmani_tajweed,
-                    translation: correspondingVerse.translations?.[0]?.text.replace(/<[^>]*>/g, '') || (isArabic ? 'التفسير غير متوفر' : 'Translation not available.'),
-                };
-            }).filter(Boolean) as Surah['verses'];
-
-            setFullSurah({
-                ...selectedSurahInfo,
-                verses: combinedVerses,
-            });
-
-        } else {
-            // Fallback to quran.com for other editions
-            const response = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${selectedSurahInfo.number}?language=en&words=false&translations=${translationId}&fields=text_uthmani&per_page=all`);
-            
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const data = await response.json();
-
-            const combinedVerses: Surah['verses'] = data.verses.map((verse: any) => ({
-              number: { inQuran: verse.id, inSurah: verse.verse_number },
-              text: verse.text_uthmani,
-              translation: verse.translations?.[0]?.text.replace(/<[^>]*>/g, '') || (isArabic ? 'التفسير غير متوفر' : 'Translation not available.'),
-            }));
-
-            setFullSurah({
-              ...selectedSurahInfo,
-              verses: combinedVerses,
-            });
+        const response = await fetch(`https://api.alquran.cloud/v1/surah/${selectedSurahInfo.number}/editions/${selectedEdition},${translationEdition}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const data = await response.json();
+
+        if (data.code !== 200 || !data.data || data.data.length < 2) {
+            throw new Error("Invalid API response from Al Quran Cloud.");
+        }
+
+        const [arabicEdition, translationEditionData] = data.data;
+
+        const combinedVerses: Surah['verses'] = arabicEdition.ayahs.map((ayah: any, index: number) => ({
+          number: { inQuran: ayah.number, inSurah: ayah.numberInSurah },
+          text: ayah.text,
+          translation: translationEditionData.ayahs[index].text,
+        }));
+
+        setFullSurah({
+          ...selectedSurahInfo,
+          verses: combinedVerses,
+        });
 
       } catch (error) {
         console.error("Failed to fetch Surah data:", error);

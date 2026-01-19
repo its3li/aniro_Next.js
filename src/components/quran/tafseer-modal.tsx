@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Dialog,
@@ -36,21 +37,24 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
         setIsLoading(true);
         setTafseerContent(null);
         try {
-          const verseKey = `${surahNumber}:${verse.number.inSurah}`;
-          const tafsirId = isArabic ? 171 : 169; // 171 for Ibn Kathir (AR), 169 for Ibn Kathir (EN)
-          const response = await fetch(`https://api.quran.com/api/v4/quran/tafsirs/${tafsirId}?verse_key=${verseKey}`);
+          const verseRef = `${surahNumber}:${verse.number.inSurah}`;
+          const tafsirEdition = isArabic ? 'ar.muyassar' : 'en.kathir';
+          const response = await fetch(`https://api.alquran.cloud/v1/ayah/${verseRef}/${tafsirEdition}`);
+
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
           const data = await response.json();
           
-          let tafseerText = data.tafsirs[0]?.text;
-
-          if (!tafseerText) {
+          if (data.code !== 200 || !data.data) {
             throw new Error("Tafseer not found for this verse.");
           }
 
-          tafseerText = tafseerText.replace(/<[^>]*>/g, '');
+          const tafseerText = data.data.text;
+
+          if (!tafseerText) {
+            throw new Error("Tafseer content is empty.");
+          }
 
           setTafseerContent(tafseerText);
         } catch (error) {
@@ -75,6 +79,8 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
     navigator.clipboard.writeText(textToCopy);
     toast({ title: isArabic ? 'تم النسخ إلى الحافظة!' : 'Copied to clipboard!' });
   };
+
+  const sourceName = isArabic ? 'تفسير الميسر' : 'Tafsir Ibn Kathir';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -102,7 +108,7 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
                           {tafseerContent}
                       </p>
                     </ScrollArea>
-                    <p className='text-sm text-muted-foreground'>{isArabic ? 'المصدر: تفسير ابن كثير (quran.com API)' : 'Source: Tafsir Ibn Kathir (quran.com API)'}</p>
+                    <p className='text-sm text-muted-foreground'>{isArabic ? 'المصدر:' : 'Source:'} {sourceName} (AlQuran.cloud API)</p>
                 </>
             )}
         </div>

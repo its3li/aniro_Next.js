@@ -54,7 +54,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="uthmani">{isArabic ? "حفص عن عاصم" : "Hafs 'an 'Asim"}</SelectItem>
-                    <SelectItem value="warsh" disabled>{isArabic ? "ورش عن نافع" : "Warsh an-Nafi'"}</SelectItem>
+                    <SelectItem value="warsh">{isArabic ? "ورش عن نافع" : "Warsh an-Nafi'"}</SelectItem>
                     <SelectItem value="shubah" disabled>{isArabic ? "شعبة عن عاصم" : "Shu'bah 'an 'Asim"}</SelectItem>
                     <SelectItem value="tajweed">{isArabic ? "تجويد ملون" : "Color-coded Tajweed"}</SelectItem>
                 </SelectContent>
@@ -87,8 +87,8 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
                 className="bg-foreground/5 p-4 rounded-2xl cursor-pointer"
               >
                 <p className="text-right font-quran text-2xl leading-loose mb-4">
-                  {quranEdition === 'tajweed' && verse.text_uthmani_tajweed ? (
-                    <span dangerouslySetInnerHTML={{ __html: verse.text_uthmani_tajweed }} />
+                  {quranEdition === 'tajweed' ? (
+                    <span dangerouslySetInnerHTML={{ __html: verse.text }} />
                   ) : (
                     verse.text
                   )}
@@ -105,8 +105,8 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
             <p className="font-quran text-3xl leading-loose text-right">
               {surah.verses.map(verse => (
                 <span key={verse.number.inSurah} onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }}>
-                   {quranEdition === 'tajweed' && verse.text_uthmani_tajweed ? (
-                    <span dangerouslySetInnerHTML={{ __html: verse.text_uthmani_tajweed }} />
+                   {quranEdition === 'tajweed' ? (
+                    <span dangerouslySetInnerHTML={{ __html: verse.text }} />
                   ) : (
                     <span>{verse.text}</span>
                   )}
