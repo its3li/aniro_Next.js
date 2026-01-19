@@ -17,7 +17,7 @@ export function GeneralSettings() {
       </GlassCardHeader>
       <GlassCardContent>
         <div className="space-y-4">
-          <div className="grid grid-cols-[1fr,auto] items-center gap-4">
+          <div className="flex items-center justify-between">
             <Label htmlFor="language-switch">{isArabic ? 'اللغة' : 'Language'}</Label>
             <div className='flex items-center gap-2 text-sm'>
               <span>English</span>
@@ -29,7 +29,7 @@ export function GeneralSettings() {
               <span>عربي</span>
             </div>
           </div>
-          <div className="grid grid-cols-[1fr,auto] items-center gap-4">
+          <div className="flex items-center justify-between">
             <Label htmlFor="dark-mode-switch">{isArabic ? 'الوضع الداكن' : 'Dark Mode'}</Label>
             <Switch
               id="dark-mode-switch"
