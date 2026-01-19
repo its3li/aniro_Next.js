@@ -20,9 +20,13 @@ export function getPrayerTimes(date: Date, offset: number = 0): PrayerTime[] {
     return mockPrayerTimes.map(pt => {
         const [hours, minutes] = pt.time.split(':').map(Number);
         const newHours = (hours + offset + 24) % 24;
+        
+        let h = newHours % 12;
+        if (h === 0) h = 12; // the hour '0' should be '12'
+
         return {
             ...pt,
-            time: `${String(newHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+            time: `${h}:${String(minutes).padStart(2, '0')}`,
         };
     });
 }
