@@ -5,8 +5,9 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import { cn } from '@/lib/utils';
 import { SettingsProvider } from '@/components/providers/settings-provider';
 import { AuroraBackground } from '@/components/aurora-background';
-import { BottomNav } from '@/components/bottom-nav';
 import { Toaster } from "@/components/ui/toaster";
+import { AudioPlayerProvider } from '@/components/providers/audio-player-provider';
+import { GlobalPlayer } from '@/components/global-player';
 
 export const metadata: Metadata = {
   title: 'Aniro',
@@ -36,11 +37,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SettingsProvider>
-            <AuroraBackground>
-              <main className="pb-28">{children}</main>
-              <BottomNav />
-            </AuroraBackground>
-            <Toaster />
+            <AudioPlayerProvider>
+              <AuroraBackground>
+                <main className="pb-28">{children}</main>
+                <GlobalPlayer />
+              </AuroraBackground>
+              <Toaster />
+            </AudioPlayerProvider>
           </SettingsProvider>
         </ThemeProvider>
       </body>

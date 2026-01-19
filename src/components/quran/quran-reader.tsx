@@ -18,8 +18,8 @@ import { useSettings, type QuranEdition } from '../providers/settings-provider';
 import { parseTajweed, stripTajweed } from '@/lib/tajweed';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { QuranAudioPlayer } from './quran-audio-player';
-import { ReciterSelectModal } from './reciter-select-modal';
+import { useAudioPlayer } from '../providers/audio-player-provider';
+
 
 interface QuranReaderProps {
   surah: Surah;
@@ -27,278 +27,45 @@ interface QuranReaderProps {
 }
 
 export function QuranReader({ surah, onBack }: QuranReaderProps) {
-  const { settings, setQuranViewMode, setQuranEdition, setQuranReciter } = useSettings();
-  const { quranViewMode, language, quranEdition, quranReciter } = settings;
+  const { settings, setQuranViewMode, setQuranEdition } = useSettings();
+  const { quranViewMode, language, quranEdition } = settings;
   const isArabic = language === 'ar';
   const { toast } = useToast();
+  
+  const { playerState, playVerse, playSurah, handlePlayPause, handlePlayerClose } = useAudioPlayer();
 
   const [selectedVerseForTafseer, setSelectedVerseForTafseer] = useState<Verse | null>(null);
   const [isTafseerOpen, setTafseerOpen] = useState(false);
-  const [isReciterModalOpen, setReciterModalOpen] = useState(false);
   
-  const [playerState, setPlayerState] = useState({
-    showPlayer: false,
-    isPlaying: false,
-    isRepeating: false,
-    isContinuous: false,
-    activeVerseKey: null as string | null,
-    progress: 0,
-    duration: 0,
-  });
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const verseRefs = useRef<Map<string, HTMLElement | null>>(new Map());
-  const audioQueueRef = useRef<{ verseKey: string; url: string }[]>([]);
-  const isSeekingRef = useRef(false);
-  const playerStateRef = useRef(playerState);
-  const pendingActionRef = useRef<(() => void) | null>(null);
 
+  // Scroll to active verse
   useEffect(() => {
-    playerStateRef.current = playerState;
-  }, [playerState]);
-
-  const getVerseByKey = useCallback((key: string | null): Verse | undefined => {
-    if (!key) return undefined;
-    const verseNum = parseInt(key.split(':')[1]);
-    return surah.verses.find(v => v.number.inSurah === verseNum);
-  }, [surah.verses]);
-
-  const cleanupAudio = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.onloadedmetadata = null;
-      audioRef.current.ontimeupdate = null;
-      audioRef.current.onended = null;
-      audioRef.current.onerror = null;
-      audioRef.current.src = '';
-      audioRef.current = null;
+    if (playerState.activeVerseKey && playerState.isPlaying) {
+      // A short delay to allow the UI to update before scrolling
+      setTimeout(() => {
+        verseRefs.current.get(playerState.activeVerseKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
     }
-    audioQueueRef.current = [];
-  }, []);
-
-  const handlePlayerClose = useCallback(() => {
-    cleanupAudio();
-    setPlayerState({
-      showPlayer: false,
-      isPlaying: false,
-      isRepeating: false,
-      isContinuous: false,
-      activeVerseKey: null,
-      progress: 0,
-      duration: 0,
-    });
-  }, [cleanupAudio]);
-
-  const fillAudioQueue = useCallback(async (startVerseIndex: number) => {
-    if (startVerseIndex >= surah.verses.length) return;
-    
-    const versesToQueue = surah.verses.slice(startVerseIndex, startVerseIndex + 5);
-    const promises = versesToQueue.map(async (verse) => {
-        try {
-            const verseRef = `${surah.number}:${verse.number.inSurah}`;
-            // Fetch the audio URL for the verse and reciter
-            const response = await fetch(`https://api.alquran.cloud/v1/ayah/${verseRef}/${quranReciter}`);
-            if (!response.ok) return null;
-            const data = await response.json();
-            if (data.code !== 200 || !data.data.audio) return null;
-            return { verseKey: verseRef, url: data.data.audio };
-        } catch {
-            return null;
-        }
-    });
-
-    const results = (await Promise.all(promises)).filter((r): r is { verseKey: string; url: string } => r !== null);
-    
-    // Add new items to the queue, avoiding duplicates
-    const existingKeys = new Set(audioQueueRef.current.map(item => item.verseKey));
-    const newItems = results.filter(item => !existingKeys.has(item.verseKey));
-    audioQueueRef.current.push(...newItems);
-
-  }, [quranReciter, surah.number, surah.verses]);
-
-  const playNextInQueue = useCallback(() => {
-    if (playerStateRef.current.isContinuous) {
-        if (audioQueueRef.current.length <= 4) {
-            const lastQueuedVerseKey = audioQueueRef.current[audioQueueRef.current.length - 1]?.verseKey;
-            const lastVerse = getVerseByKey(lastQueuedVerseKey);
-            if (lastVerse) {
-                const lastVerseIndex = surah.verses.findIndex(v => v.number.inSurah === lastVerse.number.inSurah);
-                const nextVerseIndexToQueue = lastVerseIndex + 1;
-                if (nextVerseIndexToQueue < surah.verses.length) {
-                    fillAudioQueue(nextVerseIndexToQueue);
-                }
-            }
-        }
-    }
+  }, [playerState.activeVerseKey, playerState.isPlaying]);
   
-    if (audioQueueRef.current.length === 0) {
-      if (playerStateRef.current.isContinuous) {
-        handlePlayerClose(); // Surah finished
-      }
-      return;
-    }
-  
-    const { verseKey, url } = audioQueueRef.current.shift()!;
-    const verse = getVerseByKey(verseKey);
-    if (!verse) {
-      if (playerStateRef.current.isContinuous) playNextInQueue();
-      return;
-    }
-  
-    setPlayerState(s => ({ ...s, isPlaying: true, activeVerseKey: verseKey, progress: 0, duration: 0, showPlayer: true }));
-    verseRefs.current.get(verseKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  
-    if (audioRef.current) {
-      audioRef.current.src = url;
-    } else {
-      audioRef.current = new Audio(url);
-    }
-    const newAudio = audioRef.current;
-  
-    newAudio.onloadedmetadata = () => setPlayerState(s => s.activeVerseKey === verseKey ? { ...s, duration: newAudio.duration } : s);
-    newAudio.ontimeupdate = () => {
-      if (!isSeekingRef.current) {
-        setPlayerState(s => s.activeVerseKey === verseKey ? { ...s, progress: newAudio.currentTime } : s);
-      }
-    };
-    newAudio.onended = () => {
-      if (isSeekingRef.current) return;
-      
-      if (playerStateRef.current.isRepeating && !playerStateRef.current.isContinuous) {
-        newAudio.currentTime = 0;
-        newAudio.play().catch(e => console.error("Error re-playing audio:", e));
-      } else if (playerStateRef.current.isContinuous) {
-        playNextInQueue();
-      } else {
-        setPlayerState(s => ({ ...s, isPlaying: false, progress: s.duration }));
-      }
-    };
-    newAudio.onerror = () => {
-      console.error("Audio playback error for", url);
-      // Silently skip to the next
-      if (playerStateRef.current.isContinuous) {
-        playNextInQueue();
-      } else {
-        handlePlayerClose();
-      }
-    };
-  
-    newAudio.play().catch(newAudio.onerror);
-  }, [getVerseByKey, handlePlayerClose, surah.verses, fillAudioQueue]);
 
-  const startPlayback = useCallback(async (verseKey: string, isContinuous: boolean) => {
-    cleanupAudio();
-    const verseIndex = surah.verses.findIndex(v => `${surah.number}:${v.number.inSurah}` === verseKey);
-    if (verseIndex === -1) return;
-
-    setPlayerState(s => ({
-      ...s,
-      isContinuous: isContinuous,
-      isRepeating: isContinuous ? false : s.isRepeating, // Disable repeat on continuous
-      activeVerseKey: verseKey,
-      showPlayer: true,
-      isPlaying: true
-    }));
-
-    await fillAudioQueue(verseIndex);
-    playNextInQueue();
-  }, [cleanupAudio, fillAudioQueue, playNextInQueue, surah.number, surah.verses]);
-
-  const ensureReciterIsSet = (callback: () => void) => {
-    const hasSetReciter = localStorage.getItem('hasSetReciter') === 'true';
-    if (hasSetReciter) {
-      callback();
-    } else {
-      pendingActionRef.current = callback;
-      setReciterModalOpen(true);
-    }
-  };
-
-  const handleReciterSelect = (reciterIdentifier: string) => {
-    setQuranReciter(reciterIdentifier);
-    localStorage.setItem('hasSetReciter', 'true');
-    setReciterModalOpen(false);
-    if (pendingActionRef.current) {
-      pendingActionRef.current();
-      pendingActionRef.current = null;
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      cleanupAudio();
-    };
-  }, [cleanupAudio]);
-
-  const handlePlayPause = () => {
-    if (playerState.isPlaying) {
-      audioRef.current?.pause();
-      setPlayerState(s => ({...s, isPlaying: false}));
-    } else if (audioRef.current && audioRef.current.src) {
-      audioRef.current.play().catch(() => handlePlayerClose());
-      setPlayerState(s => ({...s, isPlaying: true}));
-    } else if (playerState.activeVerseKey) {
-        startPlayback(playerState.activeVerseKey, playerState.isContinuous);
-    }
-  };
-
-  const handleNext = () => {
-    if (playerState.isContinuous) {
-        playNextInQueue();
-    } else if (playerState.activeVerseKey) {
-        const verse = getVerseByKey(playerState.activeVerseKey);
-        if(!verse) return;
-        const currentIdx = surah.verses.findIndex(v => v.number.inSurah === verse.number.inSurah);
-        if (currentIdx < surah.verses.length - 1) {
-            startPlayback(`${surah.number}:${surah.verses[currentIdx + 1].number.inSurah}`, false);
-        }
-    }
-  };
-
-  const handlePrev = () => {
-    if (playerState.activeVerseKey) {
-        const verse = getVerseByKey(playerState.activeVerseKey);
-        if(!verse) return;
-        const currentIdx = surah.verses.findIndex(v => v.number.inSurah === verse.number.inSurah);
-        if (currentIdx > 0) {
-            startPlayback(`${surah.number}:${surah.verses[currentIdx - 1].number.inSurah}`, playerState.isContinuous);
-        }
-    }
-  };
-
-  const handleSeek = (value: number) => {
-    if (audioRef.current) {
-      isSeekingRef.current = true;
-      audioRef.current.currentTime = value;
-      setPlayerState(s => ({ ...s, progress: value }));
-      // Let's ensure seeking doesn't break things
-      setTimeout(() => { isSeekingRef.current = false; }, 100);
-    }
-  };
-  
-  const handleRepeatToggle = () => {
-    if(!playerState.isContinuous) {
-      setPlayerState(s => ({ ...s, isRepeating: !s.isRepeating }));
-    }
-  };
-  
   const handleVersePlayClick = (verse: Verse) => {
     const verseKey = `${surah.number}:${verse.number.inSurah}`;
     if (playerState.activeVerseKey === verseKey && playerState.isPlaying) {
       handlePlayPause();
     } else {
-      ensureReciterIsSet(() => startPlayback(verseKey, false));
+      playVerse(surah, verse);
     }
   };
   
   const handleToggleContinuousPlay = () => {
-      if (playerState.isContinuous && playerState.isPlaying) {
-          handlePlayerClose(); // Stop continuous play completely
+      const { isPlaying, isContinuous, activeVerseKey } = playerState;
+      if (isContinuous && isPlaying) {
+          handlePlayerClose();
       } else {
-          ensureReciterIsSet(() => {
-              const startVerseKey = playerState.activeVerseKey || `${surah.number}:${surah.verses[0].number.inSurah}`;
-              startPlayback(startVerseKey, true);
-          });
+          const startVerse = activeVerseKey ? surah.verses.find(v => `${surah.number}:${v.number.inSurah}` === activeVerseKey) : undefined;
+          playSurah(surah, startVerse);
       }
   };
 
@@ -313,11 +80,10 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
     setTafseerOpen(true);
   };
   
-  const activeVerse = getVerseByKey(playerState.activeVerseKey);
   const isSurahPlaying = playerState.isContinuous && playerState.isPlaying;
 
   return (
-    <div className='pb-40'>
+    <div>
       <header className="sticky top-0 z-20 bg-background/70 backdrop-blur-lg border-b p-4">
         <div className="flex items-center justify-between gap-4">
           <Button variant="ghost" size="icon" onClick={onBack}>
@@ -427,24 +193,6 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
           </div>
         )}
       </div>
-
-      <QuranAudioPlayer
-        isOpen={playerState.showPlayer}
-        isPlaying={playerState.isPlaying}
-        surahName={isArabic ? surah.name : surah.englishName}
-        verseNumber={activeVerse?.number.inSurah || 0}
-        progress={playerState.progress}
-        duration={playerState.duration}
-        isRepeating={playerState.isRepeating}
-        isContinuousPlay={playerState.isContinuous}
-        onPlayPause={handlePlayPause}
-        onNext={handleNext}
-        onPrev={handlePrev}
-        onSeek={handleSeek}
-        onRepeatToggle={handleRepeatToggle}
-        onReciterChange={setQuranReciter}
-        onClose={handlePlayerClose}
-      />
       
       {selectedVerseForTafseer && (
         <TafseerModal 
@@ -455,12 +203,6 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
           onClose={() => setTafseerOpen(false)} 
         />
       )}
-
-      <ReciterSelectModal 
-        isOpen={isReciterModalOpen}
-        onClose={() => setReciterModalOpen(false)}
-        onSelect={handleReciterSelect}
-      />
     </div>
   );
 }
