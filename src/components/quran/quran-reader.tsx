@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select';
 import { TafseerModal } from './tafseer-modal';
 import { useSettings, type QuranEdition } from '../providers/settings-provider';
-import { parseTajweed } from '@/lib/tajweed';
+import { parseTajweed, stripTajweed } from '@/lib/tajweed';
 import { ReciterSelectModal } from './reciter-select-modal';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -90,7 +90,8 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
   };
 
   const handleCopy = (verse: Verse) => {
-    const textToCopy = `${verse.text} (${verse.number.inSurah})\n\n${verse.translation}`;
+    const pureText = stripTajweed(verse.text);
+    const textToCopy = `${pureText} (${isArabic ? surah.name : surah.englishName}:${verse.number.inSurah})`;
     navigator.clipboard.writeText(textToCopy);
     toast({ title: isArabic ? 'تم نسخ الآية' : 'Verse copied to clipboard' });
   };

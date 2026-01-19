@@ -15,6 +15,7 @@ import { Copy, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
 import { useSettings } from '../providers/settings-provider';
+import { stripTajweed } from '@/lib/tajweed';
 
 interface TafseerModalProps {
   verse: Verse;
@@ -75,7 +76,8 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
   }, [isOpen, verse, surahName, surahNumber, toast, isArabic]);
 
   const handleCopy = () => {
-    const textToCopy = `${verse.text}\n\n${verse.translation}\n\n${isArabic ? 'التفسير' : 'Tafseer'}:\n${tafseerContent || ''}\n- Quran, ${surahName} ${verse.number.inSurah}`;
+    const pureText = stripTajweed(verse.text);
+    const textToCopy = `${pureText} (${surahName}:${verse.number.inSurah})`;
     navigator.clipboard.writeText(textToCopy);
     toast({ title: isArabic ? 'تم النسخ إلى الحافظة!' : 'Copied to clipboard!' });
   };

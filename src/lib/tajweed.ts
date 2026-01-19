@@ -37,3 +37,11 @@ export const tajweedRulesMap = {
       return match;
     });
   }
+
+  export function stripTajweed(text: string): string {
+    if (!text) return '';
+    // This regex matches the tajweed tags and we replace the match with the content inside.
+    // e.g., [h:1[ٱ]] becomes ٱ
+    const regex = /\[([a-z])(?::(\d+))?\[(.*?)\]/g;
+    return text.replace(regex, '$3');
+  }
