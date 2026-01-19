@@ -35,7 +35,7 @@ const defaultSettings: Settings = {
   language: 'en',
   quranViewMode: 'list',
   quranEdition: 'uthmani',
-  quranReciter: 'ar.alafasy',
+  quranReciter: 'ar.mahermuaiqly',
 };
 
 const SettingsProviderContext = createContext<SettingsProviderState>({
@@ -59,7 +59,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         // Merge stored settings with defaults to avoid breaking changes
         const parsedSettings = JSON.parse(storedSettings);
         if (!parsedSettings.quranReciter) {
-          parsedSettings.quranReciter = 'ar.alafasy';
+          parsedSettings.quranReciter = 'ar.mahermuaiqly';
         }
         setSettings(prev => ({ ...prev, ...parsedSettings }));
       }

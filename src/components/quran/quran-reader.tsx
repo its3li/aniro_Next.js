@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Surah, Verse } from '@/lib/quran';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Book, List, Play, Pause, Copy } from 'lucide-react';
+import { ArrowLeft, Book, List, Play, Pause, Copy, PlayCircle, PauseCircle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import {
@@ -42,17 +42,49 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
     duration: 0,
     isRepeating: false,
   });
+  const [isContinuousPlay, setContinuousPlay] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const verseRefs = useRef<Map<string, HTMLElement | null>>(new Map());
+  const playerStateRef = useRef({ isContinuousPlay, isRepeating: audioState.isRepeating });
+
+  useEffect(() => {
+    playerStateRef.current = { isContinuousPlay, isRepeating: audioState.isRepeating };
+  }, [isContinuousPlay, audioState.isRepeating]);
 
   const getVerseByKey = (key: string | null): Verse | undefined => {
     if (!key) return undefined;
     const verseNum = parseInt(key.split(':')[1]);
     return surah.verses.find(v => v.number.inSurah === verseNum);
   };
+  
+  const handlePlayerClose = useCallback(() => {
+    audioRef.current?.pause();
+    setAudioState({
+      isPlaying: false,
+      activeVerseKey: null,
+      showPlayer: false,
+      progress: 0,
+      duration: 0,
+      isRepeating: false,
+    });
+    setContinuousPlay(false);
+  }, []);
 
-  const playVerse = useCallback((verseKey: string) => {
+  const handleNext = useCallback(() => {
+    const currentVerse = getVerseByKey(audioState.activeVerseKey);
+    if (!currentVerse) return;
+    const currentIdx = surah.verses.findIndex(v => v.number.inSurah === currentVerse.number.inSurah);
+    if (currentIdx < surah.verses.length - 1) {
+      const nextVerse = surah.verses[currentIdx + 1];
+      playVerse(`${surah.number}:${nextVerse.number.inSurah}`);
+    } else {
+      setContinuousPlay(false);
+      handlePlayerClose();
+    }
+  }, [audioState.activeVerseKey, surah.number, surah.verses, handlePlayerClose]); // playVerse removed
+
+  const playVerse = useCallback(async (verseKey: string) => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = '';
@@ -63,44 +95,68 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
       handlePlayerClose();
       return;
     }
-
-    const audioUrl = `https://cdn.islamic.network/quran/audio/128/${quranReciter}/${verse.number.inQuran}.mp3`;
-    const newAudio = new Audio(audioUrl);
-    audioRef.current = newAudio;
-
-    newAudio.onloadedmetadata = () => setAudioState(s => ({ ...s, duration: newAudio.duration }));
-    newAudio.ontimeupdate = () => setAudioState(s => ({ ...s, progress: newAudio.currentTime }));
-    newAudio.onended = () => {
-      if (audioState.isRepeating) {
-        newAudio.currentTime = 0;
-        newAudio.play();
-      } else {
-        handleNext();
-      }
-    };
     
-    newAudio.play().catch(err => {
-      console.error("Audio play failed:", err);
-      toast({
-        variant: "destructive",
-        title: isArabic ? "خطأ في تشغيل الصوت" : "Error playing audio",
-        description: isArabic ? "تعذر تشغيل ملف الصوت." : "Could not play the audio file.",
-      });
-      setAudioState(s => ({ ...s, isPlaying: false }));
-    });
-
-    setAudioState(s => ({ ...s, isPlaying: true, activeVerseKey: verseKey, showPlayer: true }));
-
+    setAudioState(s => ({ ...s, isPlaying: true, activeVerseKey: verseKey, showPlayer: true, progress: 0, duration: 0 }));
     const verseElement = verseRefs.current.get(verseKey);
     verseElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-  }, [quranReciter, isArabic, toast, audioState.isRepeating, surah.verses]);
+    try {
+      const response = await fetch(`https://api.alquran.cloud/v1/ayah/${verse.number.inQuran}/${quranReciter}`);
+      if (!response.ok) throw new Error('Failed to fetch audio data.');
+      const result = await response.json();
+      if (result.code !== 200 || !result.data.audio) throw new Error('Invalid audio data from API.');
+      
+      const audioUrl = result.data.audio;
+      const newAudio = new Audio(audioUrl);
+      audioRef.current = newAudio;
+
+      newAudio.onloadedmetadata = () => setAudioState(s => ({ ...s, duration: newAudio.duration }));
+      newAudio.ontimeupdate = () => {
+        if (newAudio.duration > 0) {
+          setAudioState(s => ({ ...s, progress: newAudio.currentTime }));
+        }
+      };
+      newAudio.onended = () => {
+        const { isRepeating, isContinuousPlay } = playerStateRef.current;
+        if (isRepeating) {
+          newAudio.currentTime = 0;
+          newAudio.play();
+        } else if (isContinuousPlay) {
+          handleNext();
+        } else {
+          setAudioState(s => ({ ...s, isPlaying: false, progress: 0 }));
+        }
+      };
+      newAudio.onerror = () => {
+        toast({
+          variant: "destructive",
+          title: isArabic ? "خطأ في تشغيل الصوت" : "Error playing audio",
+          description: isArabic ? `تعذر تشغيل ملف الصوت للقارئ ${quranReciter}.` : `Could not play audio for ${quranReciter}.`,
+        });
+        setAudioState(s => ({ ...s, isPlaying: false }));
+      };
+      
+      await newAudio.play();
+
+    } catch (error) {
+      console.error("Failed to fetch and play verse:", error);
+      toast({
+        variant: "destructive",
+        title: isArabic ? "خطأ في جلب الصوت" : "Error fetching audio",
+        description: error instanceof Error ? error.message : (isArabic ? "الرجاء التحقق من اتصالك بالإنترنت." : "Please check your internet connection."),
+      });
+      handlePlayerClose();
+    }
+
+  }, [quranReciter, isArabic, toast, handleNext, handlePlayerClose]);
+
 
   useEffect(() => {
+    // This effect handles reciter changes during playback
     if (audioState.isPlaying && audioState.activeVerseKey) {
       playVerse(audioState.activeVerseKey);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quranReciter]);
 
   useEffect(() => {
@@ -114,20 +170,10 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
       audioRef.current?.pause();
       setAudioState(s => ({ ...s, isPlaying: false }));
     } else if (audioState.activeVerseKey) {
-      audioRef.current?.play();
+      audioRef.current?.play().catch(() => {
+        playVerse(audioState.activeVerseKey!);
+      });
       setAudioState(s => ({ ...s, isPlaying: true }));
-    }
-  };
-
-  const handleNext = () => {
-    const currentVerse = getVerseByKey(audioState.activeVerseKey);
-    if (!currentVerse) return;
-    const currentIdx = surah.verses.findIndex(v => v.number.inSurah === currentVerse.number.inSurah);
-    if (currentIdx < surah.verses.length - 1) {
-      const nextVerse = surah.verses[currentIdx + 1];
-      playVerse(`${surah.number}:${nextVerse.number.inSurah}`);
-    } else {
-      handlePlayerClose();
     }
   };
 
@@ -150,25 +196,40 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
   const handleRepeatToggle = () => {
     setAudioState(s => ({ ...s, isRepeating: !s.isRepeating }));
   };
-
-  const handlePlayerClose = () => {
-    audioRef.current?.pause();
-    setAudioState({
-      isPlaying: false,
-      activeVerseKey: null,
-      showPlayer: false,
-      progress: 0,
-      duration: 0,
-      isRepeating: false,
-    });
-  };
-
+  
   const handleVersePlayClick = (verse: Verse) => {
+    setContinuousPlay(false);
     const verseKey = `${surah.number}:${verse.number.inSurah}`;
-    if (audioState.activeVerseKey === verseKey) {
+    if (audioState.activeVerseKey === verseKey && audioState.isPlaying) {
       handlePlayPause();
     } else {
       playVerse(verseKey);
+    }
+  };
+
+  const handleToggleContinuousPlay = () => {
+    const isNowPlaying = !(isContinuousPlay && audioState.isPlaying);
+
+    setContinuousPlay(true);
+    
+    if (isNowPlaying) {
+      let verseToPlayKey = audioState.activeVerseKey;
+      if (!verseToPlayKey) {
+          const firstVerse = surah.verses[0];
+          if(firstVerse) verseToPlayKey = `${surah.number}:${firstVerse.number.inSurah}`;
+      }
+
+      if (verseToPlayKey) {
+         if (audioRef.current && audioState.activeVerseKey === verseToPlayKey && !audioState.isPlaying) {
+            audioRef.current.play();
+            setAudioState(s => ({ ...s, isPlaying: true }));
+         } else {
+            playVerse(verseToPlayKey);
+         }
+      }
+    } else {
+      audioRef.current?.pause();
+      setAudioState(s => ({...s, isPlaying: false}));
     }
   };
 
@@ -184,6 +245,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
   };
   
   const activeVerse = getVerseByKey(audioState.activeVerseKey);
+  const isSurahPlaying = isContinuousPlay && audioState.isPlaying;
 
   return (
     <div className='pb-40'>
@@ -196,8 +258,9 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
             <h1 className="text-xl font-bold font-headline">{isArabic ? surah.name : surah.englishName}</h1>
             <p className="text-muted-foreground font-quran text-2xl">{isArabic ? surah.englishName : surah.name}</p>
           </div>
-           {/* Placeholder for alignment */}
-          <div className="w-10 h-10" />
+          <Button variant="ghost" size="icon" onClick={handleToggleContinuousPlay}>
+            {isSurahPlaying ? <PauseCircle /> : <PlayCircle />}
+          </Button>
         </div>
         <div className="flex items-center justify-between mt-4 gap-4">
             <Select value={quranEdition} onValueChange={(value) => setQuranEdition(value as QuranEdition)} dir={isArabic ? 'rtl' : 'ltr'}>
@@ -241,7 +304,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
                 key={verse.number.inQuran}
                 ref={el => verseRefs.current.set(verseKey, el)}
                 onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }}
-                className={cn("bg-foreground/5 p-4 rounded-2xl cursor-pointer flex items-start gap-4 transition-colors", isVerseActive && 'active-verse-highlight')}
+                className={cn("bg-foreground/5 p-4 rounded-2xl flex items-start gap-4 transition-colors", isVerseActive && 'active-verse-highlight')}
               >
                 <Button variant="ghost" size="icon" className="mt-2" onClick={() => handleVersePlayClick(verse)}>
                   {isPlaying ? <Pause /> : <Play />}
