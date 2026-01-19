@@ -21,14 +21,17 @@ export const tajweedRulesMap = {
   export function parseTajweed(text: string): string {
     if (!text) return '';
   
-    const regex = /\[([a-z]):(\d+)\[([^\]]+)\]\]/g;
+    // This regex now handles optional IDs for tajweed rules.
+    const regex = /\[([a-z])(?::(\d+))?\[([^\[\]]+)\]\]/g;
   
     return text.replace(regex, (match, identifier, id, content) => {
       const rule = tajweedRulesMap[identifier as keyof typeof tajweedRulesMap];
       if (rule) {
-        return `<tajweed class="${rule.className}" data-type="${rule.type}" data-description="${rule.description}" data-tajweed=":${id}">${content}</tajweed>`;
+        // Conditionally add the data-tajweed attribute only if an ID is present.
+        const idAttribute = id ? ` data-tajweed=":${id}"` : '';
+        return `<tajweed class="${rule.className}" data-type="${rule.type}" data-description="${rule.description}"${idAttribute}>${content}</tajweed>`;
       }
-      return content; // If rule not found, just return the content
+      // If the rule identifier is not found, just return the content without the tags.
+      return content;
     });
   }
-  
