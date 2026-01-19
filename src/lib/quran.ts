@@ -60,7 +60,7 @@ export interface Verse {
   export const surahs: Omit<Surah, 'verses'>[] = [
       { number: 1, name: 'سُورَةُ ٱلْفَاتِحَةِ', englishName: 'Al-Fatihah', englishNameTranslation: 'The Opener', numberOfAyahs: 7, revelationType: 'Meccan' },
       { number: 2, name: 'سُورَةُ ٱلْبَقَرَةِ', englishName: 'Al-Baqarah', englishNameTranslation: 'The Cow', numberOfAyahs: 286, revelationType: 'Medinan' },
-      { number: 3, name: 'سُورَةُ آلِ عِمْرَانَ', englishName: 'Ali 'Imran', englishNameTranslation: 'Family of Imran', numberOfAyahs: 200, revelationType: 'Medinan' },
+      { number: 3, name: 'سُورَةُ آلِ عِمْرَانَ', englishName: 'Ali \'Imran', englishNameTranslation: 'Family of Imran', numberOfAyahs: 200, revelationType: 'Medinan' },
       // ... up to 114
       { number: 112, name: 'سُورَةُ ٱلْإِخْلَاصِ', englishName: 'Al-Ikhlas', englishNameTranslation: 'The Sincerity', numberOfAyahs: 4, revelationType: 'Meccan' },
       { number: 113, name: 'سُورَةُ ٱلْفَلَقِ', englishName: 'Al-Falaq', englishNameTranslation: 'The Daybreak', numberOfAyahs: 5, revelationType: 'Meccan' },
