@@ -58,10 +58,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if (storedSettings) {
         // Merge stored settings with defaults to avoid breaking changes
         const parsedSettings = JSON.parse(storedSettings);
-        if (!parsedSettings.quranReciter) {
-          parsedSettings.quranReciter = 'ar.mahermuaiqly';
-        }
-        setSettings(prev => ({ ...prev, ...parsedSettings }));
+        setSettings(prev => ({ ...defaultSettings, ...prev, ...parsedSettings }));
       }
     } catch (error) {
       console.error("Could not load settings", error);
