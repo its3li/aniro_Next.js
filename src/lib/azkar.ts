@@ -29,6 +29,11 @@ export const azkarData: AzkarCategory = {
             translation: 'O Allah, by your leave we have reached the morning and by Your leave we have reached the evening, by Your leave we live and die and unto You is our resurrection.',
             repetitions: 1,
           },
+          {
+            arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
+            translation: 'Glory is to Allah and praise is to Him.',
+            repetitions: 100,
+          },
         ],
       },
       {
@@ -39,6 +44,11 @@ export const azkarData: AzkarCategory = {
             arabic: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ.',
             translation: 'We have reached the evening and at this very time all sovereignty belongs to Allah, and all praise is for Allah. None has the right to be worshipped except Allah, alone, without partner, to Him belongs all sovereignty and praise and He is over all things omnipotent.',
             repetitions: 1,
+          },
+          {
+            arabic: 'أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ',
+            translation: 'I seek refuge in the perfect words of Allah from the evil of that which He has created.',
+            repetitions: 3,
           },
         ],
       },
@@ -51,6 +61,21 @@ export const azkarData: AzkarCategory = {
             translation: 'I seek the forgiveness of Allah (three times). O Allah, You are Peace and from You comes peace. Blessed are You, O Owner of majesty and honor.',
             repetitions: 1,
           },
+          {
+            arabic: 'سُبْحَانَ اللَّهِ',
+            translation: 'Glory is to Allah.',
+            repetitions: 33,
+          },
+          {
+            arabic: 'الْحَمْدُ لِلَّهِ',
+            translation: 'Praise is to Allah.',
+            repetitions: 33,
+          },
+          {
+            arabic: 'اللَّهُ أَكْبَرُ',
+            translation: 'Allah is the Greatest.',
+            repetitions: 33,
+          },
         ],
       },
       {
@@ -61,8 +86,57 @@ export const azkarData: AzkarCategory = {
                 arabic: 'بِاسْمِكَ رَبِّي وَضَعْتُ جَنْبِي، وَبِكَ أَرْفَعُهُ، فَإِنْ أَمْسَكْتَ نَفْسِي فَارْحَمْهَا، وَإِنْ أَرْسَلْتَهَا فَاحْفَظْهَا بِمَا تَحْفَظُ بِهِ عِبَادَكَ الصَّالِحِينَ.',
                 translation: 'In Your name my Lord, I lie down and in Your name I rise, so if You should take my soul then have mercy upon it, and if You should return my soul then protect it as You protect Your righteous slaves.',
                 repetitions: 1,
+            },
+            {
+                arabic: 'اللَّهُمَّ قِنِي عَذَابَكَ يَوْمَ تَبْعَثُ عِبَادَكَ',
+                translation: 'O Allah, save me from Your punishment on the day that You resurrect Your slaves.',
+                repetitions: 3,
             }
         ]
       },
+      {
+        id: 'daily-duas',
+        name: 'Daily Duas',
+        subCategories: [
+          {
+            id: 'wakeup-azkar',
+            name: 'When waking up',
+            items: [{
+              arabic: 'الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ',
+              translation: 'All praise is for Allah who gave us life after having taken it from us and unto Him is the resurrection.',
+              repetitions: 1,
+            }]
+          },
+          {
+            id: 'mosque-azkar',
+            name: 'For the Mosque',
+            items: [{
+              arabic: 'اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ',
+              translation: 'O Allah, open the gates of Your mercy for me. (upon entering)',
+              repetitions: 1,
+            }, {
+              arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ',
+              translation: 'O Allah, I ask You from Your bounty. (upon leaving)',
+              repetitions: 1,
+            }]
+          }
+        ]
+      },
+      {
+        id: 'quranic-duas',
+        name: 'Quranic Duas',
+        items: [
+          {
+            arabic: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
+            translation: 'Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.',
+            repetitions: 1,
+          },
+          {
+            arabic: 'رَبِّ اجْعَلْنِي مُقِيمَ الصَّلَاةِ وَمِنْ ذُرِّيَّتِي ۚ رَبَّنَا وَتَقَبَّلْ دُعَاءِ',
+            translation: 'My Lord, make me an establisher of prayer, and [many] from my descendants. Our Lord, and accept my supplication.',
+            repetitions: 1,
+          }
+        ]
+      }
     ],
 };

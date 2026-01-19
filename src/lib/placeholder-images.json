@@ -35,6 +35,18 @@
       "description": "Sunlight streaming through a window.",
       "imageUrl": "https://images.unsplash.com/photo-1719747906196-953df4ebab06?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzdW5saWdodCUyMHdpbmRvd3xlbnwwfHx8fDE3Njg3ODMzNzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "sunlight window"
+    },
+    {
+      "id": "daily-duas",
+      "description": "Hands held up in prayer for daily supplications.",
+      "imageUrl": "https://images.unsplash.com/photo-1593024849326-ead52a8435f3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxoYW5kcyUyMHByYXlpbmd8ZW58MHx8fHwxNzY4ODI1MjMxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hands praying"
+    },
+    {
+      "id": "quranic-duas",
+      "description": "An open Quran for Quranic supplications.",
+      "imageUrl": "https://images.unsplash.com/photo-1585036923415-8d35582a8b34?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxvcGVuJTIwcXVyYW58ZW58MHx8fHwxNzY4ODI1MjQwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "open quran"
     }
   ]
 }
