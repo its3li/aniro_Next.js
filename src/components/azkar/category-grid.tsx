@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 // Map icon names to components
-const icons: { [key: string]: React.ElementType } = {
+const icons: { [key:string]: React.ElementType } = {
   Sunrise,
   Sunset,
   PersonStanding,
@@ -38,15 +38,12 @@ export function CategoryGrid({ categories, onSelect }: CategoryGridProps) {
             key={category.id}
             onClick={() => onSelect(category)}
             className={cn(
-              "aspect-square flex flex-col justify-end items-center text-center p-4 relative overflow-hidden cursor-pointer transition-transform active:scale-95 hover:scale-[1.02] rounded-3xl text-white bg-gradient-to-br shadow-lg",
+              "aspect-square flex flex-col justify-center items-center text-center p-4 cursor-pointer transition-transform active:scale-95 hover:scale-[1.02] rounded-3xl text-white bg-gradient-to-br shadow-lg",
               category.color
             )}
           >
-            <Icon className="absolute -top-2 -left-2 w-24 h-24 opacity-20 text-white" />
-            
-            <div className="relative z-10">
-              <h3 className="font-bold text-xl font-headline drop-shadow-md">{category.name}</h3>
-            </div>
+            <Icon className="w-1/3 h-1/3 drop-shadow-md" />
+            <h3 className="font-bold text-lg mt-2 font-headline drop-shadow-md">{category.name}</h3>
           </div>
         );
       })}
