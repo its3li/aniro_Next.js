@@ -27,16 +27,10 @@ export async function getQfConfig(): Promise<QuranFoundationConfig> {
     return cachedConfig;
   }
 
-  const clientId = process.env.QF_CLIENT_ID;
-  const clientSecret = process.env.QF_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error(
-      'Missing Quran Foundation API credentials. Request access: https://api-docs.quran.foundation/request-access'
-    );
-  }
-
-  const env = (process.env.QF_ENV as QuranFoundationEnv) || 'production';
+  // Hardcoded for testing as requested
+  const clientId = 'c081ba90-0334-4fe5-915f-ce3ccac847b9';
+  const clientSecret = 'lc3dnxTvesF7uLK-4PmovZ7g44';
+  const env: QuranFoundationEnv = 'production';
 
   if (!configMap[env]) {
       throw new Error(`Invalid QF_ENV specified: ${env}. Must be one of ${Object.keys(configMap).join(', ')}`);
