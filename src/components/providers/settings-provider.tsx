@@ -24,17 +24,18 @@ const SettingsProviderContext = createContext<SettingsProviderState>({
 });
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<Settings>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const storedSettings = localStorage.getItem('app-settings');
-        return storedSettings ? JSON.parse(storedSettings) : defaultSettings;
-      } catch (error) {
-        return defaultSettings;
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
+
+  useEffect(() => {
+    try {
+      const storedSettings = localStorage.getItem('app-settings');
+      if (storedSettings) {
+        setSettings(JSON.parse(storedSettings));
       }
+    } catch (error) {
+      console.error("Could not load settings", error);
     }
-    return defaultSettings;
-  });
+  }, []);
 
   useEffect(() => {
     try {
