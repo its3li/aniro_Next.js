@@ -17,6 +17,7 @@ interface QuranAudioPlayerProps {
   progress: number;
   duration: number;
   isRepeating: boolean;
+  isContinuousPlay: boolean;
   onPlayPause: () => void;
   onNext: () => void;
   onPrev: () => void;
@@ -34,6 +35,7 @@ export function QuranAudioPlayer({
   progress,
   duration,
   isRepeating,
+  isContinuousPlay,
   onPlayPause,
   onNext,
   onPrev,
@@ -115,7 +117,12 @@ export function QuranAudioPlayer({
               variant="ghost"
               size="icon"
               onClick={onRepeatToggle}
-              className={cn("rounded-full", isRepeating && 'text-primary bg-primary/10')}
+              disabled={isContinuousPlay}
+              className={cn(
+                "rounded-full",
+                isRepeating && !isContinuousPlay && 'text-primary bg-primary/10',
+                isContinuousPlay && 'opacity-50 cursor-not-allowed'
+              )}
             >
               <Repeat />
             </Button>
