@@ -52,9 +52,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioQueueRef = useRef<{ verseKey: string; url: string }[]>([]);
+  const urlsToRevokeRef = useRef<string[]>([]);
   const isSeekingRef = useRef(false);
   const playerStateRef = useRef(playerState);
   const pendingActionRef = useRef<(() => void) | null>(null);
+  const isPlayingAudioRef = useRef(false);
 
   useEffect(() => {
     playerStateRef.current = playerState;
@@ -72,6 +74,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       audioRef.current.src = '';
     }
     audioQueueRef.current = [];
+    urlsToRevokeRef.current.forEach(URL.revokeObjectURL);
+    urlsToRevokeRef.current = [];
+    isPlayingAudioRef.current = false;
   }, []);
 
   const handlePlayerClose = useCallback(() => {
@@ -88,16 +93,22 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   const fillAudioQueue = useCallback(async (surah: Surah, startVerseIndex: number) => {
     if (startVerseIndex >= surah.verses.length) return;
-    
+
     const versesToQueue = surah.verses.slice(startVerseIndex, startVerseIndex + 5);
     const promises = versesToQueue.map(async (verse) => {
         try {
             const verseRef = `${surah.number}:${verse.number.inSurah}`;
-            const response = await fetch(`https://api.alquran.cloud/v1/ayah/${verseRef}/${quranReciter}`);
-            if (!response.ok) return null;
-            const data = await response.json();
+            const apiResponse = await fetch(`https://api.alquran.cloud/v1/ayah/${verseRef}/${quranReciter}`);
+            if (!apiResponse.ok) return null;
+            const data = await apiResponse.json();
             if (data.code !== 200 || !data.data.audio) return null;
-            return { verseKey: verseRef, url: data.data.audio };
+
+            const audioResponse = await fetch(data.data.audio);
+            if (!audioResponse.ok) return null;
+            const blob = await audioResponse.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            
+            return { verseKey: verseRef, url: blobUrl };
         } catch {
             return null;
         }
@@ -107,36 +118,37 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     
     const existingKeys = new Set(audioQueueRef.current.map(item => item.verseKey));
     const newItems = results.filter(item => !existingKeys.has(item.verseKey));
+    
     audioQueueRef.current.push(...newItems);
+    urlsToRevokeRef.current.push(...newItems.map(item => item.url));
 
   }, [quranReciter]);
 
-  const playNextInQueue = useCallback(() => {
+  const playNextInQueue = useCallback(async () => {
+    if (isPlayingAudioRef.current) return;
+
     const { surah, isContinuous } = playerStateRef.current;
-    if (!surah) return;
-  
-    const currentVerseKey = playerStateRef.current.activeVerseKey;
-    if (isContinuous && currentVerseKey) {
-        const currentVerse = getVerseByKey(currentVerseKey);
-        const currentVerseIndex = surah.verses.findIndex(v => v.number.inSurah === currentVerse?.number.inSurah);
-        // Pre-load when we are 4 verses away from the end of the queue.
-        if (currentVerseIndex !== -1 && audioQueueRef.current.length < 4) {
-             const nextVerseToLoadIndex = currentVerseIndex + (5 - audioQueueRef.current.length);
-             if (nextVerseToLoadIndex < surah.verses.length){
-                fillAudioQueue(surah, nextVerseToLoadIndex);
-             }
+    
+    if (isContinuous && surah && audioQueueRef.current.length < 5) {
+      const lastVerseInQueueKey = audioQueueRef.current[audioQueueRef.current.length - 1]?.verseKey;
+      const lastVerseInSurahKey = `${surah.number}:${surah.verses[surah.verses.length - 1].number.inSurah}`;
+      
+      if (lastVerseInQueueKey !== lastVerseInSurahKey) {
+        const lastVerse = getVerseByKey(lastVerseInQueueKey || playerStateRef.current.activeVerseKey);
+        const lastVerseIndex = surah.verses.findIndex(v => v.number.inSurah === lastVerse?.number.inSurah);
+        if (lastVerseIndex !== -1) {
+          await fillAudioQueue(surah, lastVerseIndex + 1);
         }
+      }
     }
 
     if (audioQueueRef.current.length === 0) {
-      if (isContinuous) {
-        handlePlayerClose();
-      } else {
-        setPlayerState(s => ({ ...s, isPlaying: false, progress: s.duration }));
-      }
+      if (isContinuous) handlePlayerClose();
+      else setPlayerState(s => ({ ...s, isPlaying: false, progress: s.duration }));
       return;
     }
   
+    isPlayingAudioRef.current = true;
     const { verseKey, url } = audioQueueRef.current.shift()!;
   
     setPlayerState(s => ({ ...s, isPlaying: true, activeVerseKey: verseKey, progress: 0, duration: 0 }));
@@ -151,24 +163,33 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         setPlayerState(s => s.activeVerseKey === verseKey ? { ...s, progress: currentAudio.currentTime } : s);
       }
     };
+
     currentAudio.onended = () => {
       if (isSeekingRef.current) return;
-      const { isRepeating, isContinuous } = playerStateRef.current;
-      if (isRepeating && !isContinuous) {
+      isPlayingAudioRef.current = false;
+      const { isRepeating, isContinuous: isCont } = playerStateRef.current;
+      if (isRepeating && !isCont) {
         currentAudio.currentTime = 0;
         currentAudio.play().catch(() => {});
-      } else if (isContinuous) {
+        isPlayingAudioRef.current = true;
+      } else if (isCont) {
         playNextInQueue();
       } else {
         setPlayerState(s => ({ ...s, isPlaying: false, progress: s.duration }));
       }
     };
+
     currentAudio.onerror = () => {
+      isPlayingAudioRef.current = false;
       if (playerStateRef.current.isContinuous) playNextInQueue();
       else handlePlayerClose();
     };
   
-    currentAudio.play().catch(currentAudio.onerror);
+    try {
+        await currentAudio.play();
+    } catch (error) {
+        currentAudio.onerror();
+    }
   }, [getVerseByKey, handlePlayerClose, fillAudioQueue]);
 
   const startPlayback = useCallback(async (surah: Surah, verseKey: string, isContinuous: boolean) => {
@@ -230,6 +251,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const handleNext = () => {
     const { isContinuous, activeVerseKey, surah } = playerStateRef.current;
     if (!activeVerseKey || !surah) return;
+    isPlayingAudioRef.current = false;
     if (isContinuous) {
       playNextInQueue();
     } else {
@@ -299,6 +321,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
 export const useAudioPlayer = () => {
   const context = useContext(AudioPlayerContext);
-  if (context === undefined) throw new Error('useAudioPlayer must be used within a AudioPlayerProvider');
+  if (context === null) throw new Error('useAudioPlayer must be used within a AudioPlayerProvider');
   return context;
 };
