@@ -19,9 +19,10 @@ async function getQfAuthToken() {
 
     const config = await getQfConfig();
     
+    const credentials = `${config.clientId}:${config.clientSecret}`;
+    const encodedCredentials = Buffer.from(credentials).toString('base64');
+
     const body = new URLSearchParams({
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
         grant_type: 'client_credentials',
     });
 
@@ -29,9 +30,10 @@ async function getQfAuthToken() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${encodedCredentials}`
         },
         body: body.toString(),
-        cache: 'no-store' // Ensure we don't cache this POST request
+        cache: 'no-store'
     });
 
     if (!response.ok) {
