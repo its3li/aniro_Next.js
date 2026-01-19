@@ -1,9 +1,9 @@
 
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Surah, Verse } from '@/lib/quran';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Book, List, Play, Pause, Copy, PlayCircle, PauseCircle } from 'lucide-react';
+import { ArrowLeft, Book, List, Play, Pause, Copy } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import {
@@ -16,9 +16,9 @@ import {
 import { TafseerModal } from './tafseer-modal';
 import { useSettings, type QuranEdition } from '../providers/settings-provider';
 import { parseTajweed, stripTajweed } from '@/lib/tajweed';
-import { ReciterSelectModal } from './reciter-select-modal';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { QuranAudioPlayer } from './quran-audio-player';
 
 interface QuranReaderProps {
   surah: Surah;
@@ -31,82 +31,54 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
   const isArabic = language === 'ar';
   const { toast } = useToast();
 
-  const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
+  const [selectedVerseForTafseer, setSelectedVerseForTafseer] = useState<Verse | null>(null);
   const [isTafseerOpen, setTafseerOpen] = useState(false);
 
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
-  const [playingVerse, setPlayingVerse] = useState<number | null>(null);
-  const [isReciterModalOpen, setReciterModalOpen] = useState(false);
-  const [verseToPlay, setVerseToPlay] = useState<Verse | null>(null);
+  const [audioState, setAudioState] = useState({
+    isPlaying: false,
+    activeVerseKey: null as string | null,
+    showPlayer: false,
+    progress: 0,
+    duration: 0,
+    isRepeating: false,
+  });
 
-  const [surahAudio, setSurahAudio] = useState<HTMLAudioElement | null>(null);
-  const [isSurahPlaying, setIsSurahPlaying] = useState(false);
-  const [playSurahAfterReciterSelect, setPlaySurahAfterReciterSelect] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const verseRefs = useRef<Map<string, HTMLElement | null>>(new Map());
 
-  useEffect(() => {
-    return () => {
-      audio?.pause();
-      surahAudio?.pause();
+  const getVerseByKey = (key: string | null): Verse | undefined => {
+    if (!key) return undefined;
+    const verseNum = parseInt(key.split(':')[1]);
+    return surah.verses.find(v => v.number.inSurah === verseNum);
+  };
+
+  const playVerse = useCallback((verseKey: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+
+    const verse = getVerseByKey(verseKey);
+    if (!verse) {
+      handlePlayerClose();
+      return;
+    }
+
+    const audioUrl = `https://cdn.islamic.network/quran/audio/128/${quranReciter}/${verse.number.inQuran}.mp3`;
+    const newAudio = new Audio(audioUrl);
+    audioRef.current = newAudio;
+
+    newAudio.onloadedmetadata = () => setAudioState(s => ({ ...s, duration: newAudio.duration }));
+    newAudio.ontimeupdate = () => setAudioState(s => ({ ...s, progress: newAudio.currentTime }));
+    newAudio.onended = () => {
+      if (audioState.isRepeating) {
+        newAudio.currentTime = 0;
+        newAudio.play();
+      } else {
+        handleNext();
+      }
     };
-  }, [audio, surahAudio]);
-
-  const toggleSurahPlayback = useCallback(() => {
-    if (isSurahPlaying) {
-      surahAudio?.pause();
-      setIsSurahPlaying(false);
-      return;
-    }
-
-    audio?.pause();
-    setPlayingVerse(null);
-
-    const audioUrl = `https://cdn.islamic.network/quran/audio-surah/128/${quranReciter}/${surah.number}.mp3`;
-    const newSurahAudio = new Audio(audioUrl);
-
-    setSurahAudio(newSurahAudio);
-    setIsSurahPlaying(true);
-
-    newSurahAudio.play().catch((err) => {
-      console.error("Surah audio play failed:", err);
-      toast({
-        variant: "destructive",
-        title: isArabic ? "خطأ في تشغيل السورة" : "Error playing surah",
-        description: isArabic ? "تعذر تشغيل ملف الصوت." : "Could not play the audio file.",
-      });
-      setIsSurahPlaying(false);
-    });
-
-    newSurahAudio.onended = () => setIsSurahPlaying(false);
-  }, [isSurahPlaying, surahAudio, audio, quranReciter, surah.number, toast, isArabic]);
-
-  useEffect(() => {
-    if (verseToPlay && quranReciter) {
-      playAudio(verseToPlay);
-      setVerseToPlay(null);
-    }
-  }, [quranReciter, verseToPlay]);
-
-  useEffect(() => {
-    if (playSurahAfterReciterSelect && quranReciter) {
-      toggleSurahPlayback();
-      setPlaySurahAfterReciterSelect(false);
-    }
-  }, [playSurahAfterReciterSelect, quranReciter, toggleSurahPlayback]);
-
-  const playAudio = (verse: Verse) => {
-    surahAudio?.pause();
-    setIsSurahPlaying(false);
-
-    if (playingVerse === verse.number.inQuran) {
-      audio?.pause();
-      setPlayingVerse(null);
-      return;
-    }
-
-    audio?.pause();
-    const newAudio = new Audio(`https://cdn.islamic.network/quran/audio/128/${quranReciter}/${verse.number.inQuran}.mp3`);
-    setAudio(newAudio);
-    setPlayingVerse(verse.number.inQuran);
+    
     newAudio.play().catch(err => {
       console.error("Audio play failed:", err);
       toast({
@@ -114,50 +86,107 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
         title: isArabic ? "خطأ في تشغيل الصوت" : "Error playing audio",
         description: isArabic ? "تعذر تشغيل ملف الصوت." : "Could not play the audio file.",
       });
-      setPlayingVerse(null);
+      setAudioState(s => ({ ...s, isPlaying: false }));
     });
-    newAudio.onended = () => setPlayingVerse(null);
+
+    setAudioState(s => ({ ...s, isPlaying: true, activeVerseKey: verseKey, showPlayer: true }));
+
+    const verseElement = verseRefs.current.get(verseKey);
+    verseElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  }, [quranReciter, isArabic, toast, audioState.isRepeating, surah.verses]);
+
+  useEffect(() => {
+    if (audioState.isPlaying && audioState.activeVerseKey) {
+      playVerse(audioState.activeVerseKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quranReciter]);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+    };
+  }, []);
+
+  const handlePlayPause = () => {
+    if (audioState.isPlaying) {
+      audioRef.current?.pause();
+      setAudioState(s => ({ ...s, isPlaying: false }));
+    } else if (audioState.activeVerseKey) {
+      audioRef.current?.play();
+      setAudioState(s => ({ ...s, isPlaying: true }));
+    }
+  };
+
+  const handleNext = () => {
+    const currentVerse = getVerseByKey(audioState.activeVerseKey);
+    if (!currentVerse) return;
+    const currentIdx = surah.verses.findIndex(v => v.number.inSurah === currentVerse.number.inSurah);
+    if (currentIdx < surah.verses.length - 1) {
+      const nextVerse = surah.verses[currentIdx + 1];
+      playVerse(`${surah.number}:${nextVerse.number.inSurah}`);
+    } else {
+      handlePlayerClose();
+    }
+  };
+
+  const handlePrev = () => {
+    const currentVerse = getVerseByKey(audioState.activeVerseKey);
+    if (!currentVerse) return;
+    const currentIdx = surah.verses.findIndex(v => v.number.inSurah === currentVerse.number.inSurah);
+    if (currentIdx > 0) {
+      const prevVerse = surah.verses[currentIdx - 1];
+      playVerse(`${surah.number}:${prevVerse.number.inSurah}`);
+    }
+  };
+
+  const handleSeek = (value: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = value;
+    }
   };
   
-  const handlePlayClick = (verse: Verse) => {
-    if (!quranReciter) {
-      setPlaySurahAfterReciterSelect(false);
-      setVerseToPlay(verse);
-      setReciterModalOpen(true);
-    } else {
-      playAudio(verse);
-    }
+  const handleRepeatToggle = () => {
+    setAudioState(s => ({ ...s, isRepeating: !s.isRepeating }));
   };
 
-  const handlePlaySurahClick = () => {
-    if (!quranReciter) {
-      setVerseToPlay(null);
-      setPlaySurahAfterReciterSelect(true);
-      setReciterModalOpen(true);
-    } else {
-      toggleSurahPlayback();
-    }
+  const handlePlayerClose = () => {
+    audioRef.current?.pause();
+    setAudioState({
+      isPlaying: false,
+      activeVerseKey: null,
+      showPlayer: false,
+      progress: 0,
+      duration: 0,
+      isRepeating: false,
+    });
   };
 
-  const handleReciterSelected = (identifier: string) => {
-    setQuranReciter(identifier);
-    setReciterModalOpen(false);
+  const handleVersePlayClick = (verse: Verse) => {
+    const verseKey = `${surah.number}:${verse.number.inSurah}`;
+    if (audioState.activeVerseKey === verseKey) {
+      handlePlayPause();
+    } else {
+      playVerse(verseKey);
+    }
   };
 
   const handleCopy = (verse: Verse) => {
-    const pureText = stripTajweed(verse.text);
-    const textToCopy = `${pureText} (${isArabic ? surah.name : surah.englishName}:${verse.number.inSurah})`;
+    const textToCopy = `${stripTajweed(verse.text)} (${isArabic ? surah.name : surah.englishName}:${verse.number.inSurah})`;
     navigator.clipboard.writeText(textToCopy);
     toast({ title: isArabic ? 'تم نسخ الآية' : 'Verse copied to clipboard' });
   };
 
   const handleLongPress = (verse: Verse) => {
-    setSelectedVerse(verse);
+    setSelectedVerseForTafseer(verse);
     setTafseerOpen(true);
   };
+  
+  const activeVerse = getVerseByKey(audioState.activeVerseKey);
 
   return (
-    <div>
+    <div className='pb-40'>
       <header className="sticky top-0 z-20 bg-background/70 backdrop-blur-lg border-b p-4">
         <div className="flex items-center justify-between gap-4">
           <Button variant="ghost" size="icon" onClick={onBack}>
@@ -167,9 +196,8 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
             <h1 className="text-xl font-bold font-headline">{isArabic ? surah.name : surah.englishName}</h1>
             <p className="text-muted-foreground font-quran text-2xl">{isArabic ? surah.englishName : surah.name}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={handlePlaySurahClick}>
-            {isSurahPlaying ? <PauseCircle /> : <PlayCircle />}
-          </Button>
+           {/* Placeholder for alignment */}
+          <div className="w-10 h-10" />
         </div>
         <div className="flex items-center justify-between mt-4 gap-4">
             <Select value={quranEdition} onValueChange={(value) => setQuranEdition(value as QuranEdition)} dir={isArabic ? 'rtl' : 'ltr'}>
@@ -204,14 +232,19 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
       <div className="p-4 md:p-6">
         {quranViewMode === 'list' ? (
           <div className="flex flex-col gap-4">
-            {surah.verses.map((verse) => (
+            {surah.verses.map((verse) => {
+              const verseKey = `${surah.number}:${verse.number.inSurah}`;
+              const isPlaying = audioState.activeVerseKey === verseKey && audioState.isPlaying;
+              const isVerseActive = audioState.activeVerseKey === verseKey;
+              return (
               <div
                 key={verse.number.inQuran}
+                ref={el => verseRefs.current.set(verseKey, el)}
                 onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }}
-                className="bg-foreground/5 p-4 rounded-2xl cursor-pointer flex items-start gap-4"
+                className={cn("bg-foreground/5 p-4 rounded-2xl cursor-pointer flex items-start gap-4 transition-colors", isVerseActive && 'active-verse-highlight')}
               >
-                <Button variant="ghost" size="icon" className="mt-2" onClick={() => handlePlayClick(verse)}>
-                  {playingVerse === verse.number.inQuran ? <Pause /> : <Play />}
+                <Button variant="ghost" size="icon" className="mt-2" onClick={() => handleVersePlayClick(verse)}>
+                  {isPlaying ? <Pause /> : <Play />}
                 </Button>
                 <div className='flex-1'>
                   <p className="text-right font-quran text-2xl leading-loose mb-4">
@@ -227,46 +260,62 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
                   <p dir={isArabic ? 'rtl' : 'ltr'} className="text-muted-foreground leading-relaxed">{verse.translation}</p>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         ) : (
           <div className="bg-foreground/5 p-6 rounded-2xl">
             <p className="font-quran text-3xl leading-loose text-right">
-              {surah.verses.map(verse => (
-                <span key={verse.number.inQuran} onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }} className="relative group">
+              {surah.verses.map(verse => {
+                const verseKey = `${surah.number}:${verse.number.inSurah}`;
+                const isPlaying = audioState.activeVerseKey === verseKey && audioState.isPlaying;
+                const isVerseActive = audioState.activeVerseKey === verseKey;
+                return (
+                <span key={verse.number.inQuran} ref={el => verseRefs.current.set(verseKey, el)} onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }} className={cn("relative group transition-colors", isVerseActive && 'text-primary')}>
                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center gap-1 p-1 rounded-full bg-background/80 backdrop-blur-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
                      dir="ltr"
                    >
-                      <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => handlePlayClick(verse)}>
-                          {playingVerse === verse.number.inQuran ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                      <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => handleVersePlayClick(verse)}>
+                          {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                       </Button>
                       <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => handleCopy(verse)}>
                           <Copy className="h-5 w-5" />
                       </Button>
                   </div>
                    {quranEdition === 'tajweed' ? (
-                    <span className={cn(playingVerse === verse.number.inQuran ? "text-primary" : "")} dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
+                    <span dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
                   ) : (
-                    <span className={cn(playingVerse === verse.number.inQuran ? "text-primary" : "")}>{verse.text}</span>
+                    <span>{verse.text}</span>
                   )}
                   <span className="text-primary font-sans text-xl mx-2">
                     ({verse.number.inSurah})
                   </span>
                 </span>
-              ))}
+              )})}
             </p>
           </div>
         )}
       </div>
 
-      <ReciterSelectModal 
-        isOpen={isReciterModalOpen}
-        onClose={() => setReciterModalOpen(false)}
-        onSelect={handleReciterSelected}
+      <QuranAudioPlayer
+        isOpen={audioState.showPlayer}
+        isPlaying={audioState.isPlaying}
+        surahName={isArabic ? surah.name : surah.englishName}
+        verseNumber={activeVerse?.number.inSurah || 0}
+        progress={audioState.progress}
+        duration={audioState.duration}
+        isRepeating={audioState.isRepeating}
+        onPlayPause={handlePlayPause}
+        onNext={handleNext}
+        onPrev={handlePrev}
+        onSeek={handleSeek}
+        onRepeatToggle={handleRepeatToggle}
+        onReciterChange={setQuranReciter}
+        onClose={handlePlayerClose}
       />
-      {selectedVerse && (
+      
+      {selectedVerseForTafseer && (
         <TafseerModal 
-          verse={selectedVerse} 
+          verse={selectedVerseForTafseer} 
           surahName={isArabic ? surah.name : surah.englishName}
           surahNumber={surah.number}
           isOpen={isTafseerOpen} 

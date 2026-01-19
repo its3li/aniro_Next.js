@@ -73,6 +73,10 @@
   .animate-fade-slide-in {
     animation: fade-slide-in 0.5s ease-out forwards;
   }
+
+  .active-verse-highlight {
+    @apply bg-primary/10 border-primary/20;
+  }
 }
 
 @keyframes fade-slide-in {
@@ -95,3 +99,4 @@
 .madda_obligatory { color: #ff00b7; }
 .ikhf_shfw, .ikhf, .ghn { color: #00b800; }
 .iqlb { color: #00aeff; }
+
