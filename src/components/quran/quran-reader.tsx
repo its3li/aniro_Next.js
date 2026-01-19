@@ -1,9 +1,9 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Surah, Verse } from '@/lib/quran';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Book, List } from 'lucide-react';
+import { ArrowLeft, Book, List, Play, Pause, Copy } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import {
@@ -16,6 +16,9 @@ import {
 import { TafseerModal } from './tafseer-modal';
 import { useSettings, type QuranEdition } from '../providers/settings-provider';
 import { parseTajweed } from '@/lib/tajweed';
+import { ReciterSelectModal } from './reciter-select-modal';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface QuranReaderProps {
   surah: Surah;
@@ -23,15 +26,77 @@ interface QuranReaderProps {
 }
 
 export function QuranReader({ surah, onBack }: QuranReaderProps) {
-  const { settings, setQuranViewMode, setQuranEdition } = useSettings();
-  const { quranViewMode, language, quranEdition } = settings;
+  const { settings, setQuranViewMode, setQuranEdition, setQuranReciter } = useSettings();
+  const { quranViewMode, language, quranEdition, quranReciter } = settings;
   const isArabic = language === 'ar';
+  const { toast } = useToast();
+
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [isTafseerOpen, setTafseerOpen] = useState(false);
 
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [playingVerse, setPlayingVerse] = useState<number | null>(null);
+  const [isReciterModalOpen, setReciterModalOpen] = useState(false);
+  const [verseToPlay, setVerseToPlay] = useState<Verse | null>(null);
+
+  useEffect(() => {
+    return () => {
+      audio?.pause();
+    };
+  }, [audio]);
+
+  useEffect(() => {
+    if (verseToPlay && quranReciter) {
+      playAudio(verseToPlay);
+      setVerseToPlay(null);
+    }
+  }, [quranReciter, verseToPlay]);
+
+  const playAudio = (verse: Verse) => {
+    if (playingVerse === verse.number.inQuran) {
+      audio?.pause();
+      setPlayingVerse(null);
+      return;
+    }
+
+    audio?.pause();
+    const newAudio = new Audio(`https://cdn.islamic.network/quran/audio/128/${quranReciter}/${verse.number.inQuran}.mp3`);
+    setAudio(newAudio);
+    setPlayingVerse(verse.number.inQuran);
+    newAudio.play().catch(err => {
+      console.error("Audio play failed:", err);
+      toast({
+        variant: "destructive",
+        title: isArabic ? "خطأ في تشغيل الصوت" : "Error playing audio",
+        description: isArabic ? "تعذر تشغيل ملف الصوت." : "Could not play the audio file.",
+      });
+      setPlayingVerse(null);
+    });
+    newAudio.onended = () => setPlayingVerse(null);
+  };
+  
+  const handlePlayClick = (verse: Verse) => {
+    if (!quranReciter) {
+      setVerseToPlay(verse);
+      setReciterModalOpen(true);
+    } else {
+      playAudio(verse);
+    }
+  };
+
+  const handleReciterSelected = (identifier: string) => {
+    setQuranReciter(identifier);
+    setReciterModalOpen(false);
+  };
+
+  const handleCopy = (verse: Verse) => {
+    const textToCopy = `${verse.text} (${verse.number.inSurah})\n\n${verse.translation}`;
+    navigator.clipboard.writeText(textToCopy);
+    toast({ title: isArabic ? 'تم نسخ الآية' : 'Verse copied to clipboard' });
+  };
+
   const handleLongPress = (verse: Verse) => {
     setSelectedVerse(verse);
-    // Here we'd open a custom context menu. For simplicity, we'll just open the tafseer modal.
     setTafseerOpen(true);
   };
 
@@ -83,21 +148,26 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
           <div className="flex flex-col gap-4">
             {surah.verses.map((verse) => (
               <div
-                key={verse.number.inSurah}
+                key={verse.number.inQuran}
                 onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }}
-                className="bg-foreground/5 p-4 rounded-2xl cursor-pointer"
+                className="bg-foreground/5 p-4 rounded-2xl cursor-pointer flex items-start gap-4"
               >
-                <p className="text-right font-quran text-2xl leading-loose mb-4">
-                  {quranEdition === 'tajweed' ? (
-                    <span dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
-                  ) : (
-                    verse.text
-                  )}
-                  <span className="text-primary font-sans text-lg mx-2">
-                    ({verse.number.inSurah})
-                  </span>
-                </p>
-                <p dir={isArabic ? 'rtl' : 'ltr'} className="text-muted-foreground leading-relaxed">{verse.translation}</p>
+                <Button variant="ghost" size="icon" className="mt-2" onClick={() => handlePlayClick(verse)}>
+                  {playingVerse === verse.number.inQuran ? <Pause /> : <Play />}
+                </Button>
+                <div className='flex-1'>
+                  <p className="text-right font-quran text-2xl leading-loose mb-4">
+                    {quranEdition === 'tajweed' ? (
+                      <span dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
+                    ) : (
+                      verse.text
+                    )}
+                    <span className="text-primary font-sans text-lg mx-2">
+                      ({verse.number.inSurah})
+                    </span>
+                  </p>
+                  <p dir={isArabic ? 'rtl' : 'ltr'} className="text-muted-foreground leading-relaxed">{verse.translation}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -105,11 +175,21 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
           <div className="bg-foreground/5 p-6 rounded-2xl">
             <p className="font-quran text-3xl leading-loose text-right">
               {surah.verses.map(verse => (
-                <span key={verse.number.inSurah} onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }}>
+                <span key={verse.number.inQuran} onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }} className="relative group">
+                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center gap-1 p-1 rounded-full bg-background/80 backdrop-blur-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                     dir="ltr"
+                   >
+                      <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => handlePlayClick(verse)}>
+                          {playingVerse === verse.number.inQuran ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => handleCopy(verse)}>
+                          <Copy className="h-5 w-5" />
+                      </Button>
+                  </div>
                    {quranEdition === 'tajweed' ? (
-                    <span dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
+                    <span className={cn(playingVerse === verse.number.inQuran ? "text-primary" : "")} dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
                   ) : (
-                    <span>{verse.text}</span>
+                    <span className={cn(playingVerse === verse.number.inQuran ? "text-primary" : "")}>{verse.text}</span>
                   )}
                   <span className="text-primary font-sans text-xl mx-2">
                     ({verse.number.inSurah})
@@ -120,6 +200,12 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
           </div>
         )}
       </div>
+
+      <ReciterSelectModal 
+        isOpen={isReciterModalOpen}
+        onClose={() => setReciterModalOpen(false)}
+        onSelect={handleReciterSelected}
+      />
       {selectedVerse && (
         <TafseerModal 
           verse={selectedVerse} 

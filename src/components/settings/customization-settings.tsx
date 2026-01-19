@@ -6,9 +6,16 @@ import { Slider } from '@/components/ui/slider';
 import { useSettings } from '../providers/settings-provider';
 import { Button } from '../ui/button';
 import { Minus, Plus } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function CustomizationSettings() {
-  const { settings, setFontSize, setPrayerOffset } = useSettings();
+  const { settings, setFontSize, setPrayerOffset, setQuranReciter, availableReciters } = useSettings();
   const isArabic = settings.language === 'ar';
 
   const handlePrayerOffsetChange = (change: number) => {
@@ -51,6 +58,21 @@ export function CustomizationSettings() {
                     <Plus />
                 </Button>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="reciter-select">{isArabic ? 'القارئ' : 'Reciter'}</Label>
+            <Select value={settings.quranReciter} onValueChange={setQuranReciter} dir={isArabic ? 'rtl' : 'ltr'}>
+                <SelectTrigger id="reciter-select">
+                    <SelectValue placeholder={isArabic ? "اختر القارئ" : "Select a reciter"} />
+                </SelectTrigger>
+                <SelectContent>
+                    {availableReciters.map((reciter) => (
+                      <SelectItem key={reciter.identifier} value={reciter.identifier}>
+                        {isArabic ? reciter.name : reciter.englishName}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
           </div>
         </div>
       </GlassCardContent>

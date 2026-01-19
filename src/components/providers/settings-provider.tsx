@@ -1,6 +1,9 @@
 
 'use client';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import type { Reciter } from '@/lib/reciters';
+import { reciters as availableReciters } from '@/lib/reciters';
+
 
 type Language = 'en' | 'ar';
 type QuranViewMode = 'list' | 'page';
@@ -12,6 +15,7 @@ type Settings = {
   language: Language;
   quranViewMode: QuranViewMode;
   quranEdition: QuranEdition;
+  quranReciter: string;
 };
 
 type SettingsProviderState = {
@@ -21,6 +25,8 @@ type SettingsProviderState = {
   setLanguage: (language: Language) => void;
   setQuranViewMode: (mode: QuranViewMode) => void;
   setQuranEdition: (edition: QuranEdition) => void;
+  setQuranReciter: (reciter: string) => void;
+  availableReciters: Reciter[];
 };
 
 const defaultSettings: Settings = {
@@ -29,6 +35,7 @@ const defaultSettings: Settings = {
   language: 'en',
   quranViewMode: 'list',
   quranEdition: 'uthmani',
+  quranReciter: 'ar.alafasy',
 };
 
 const SettingsProviderContext = createContext<SettingsProviderState>({
@@ -38,6 +45,8 @@ const SettingsProviderContext = createContext<SettingsProviderState>({
   setLanguage: () => null,
   setQuranViewMode: () => null,
   setQuranEdition: () => null,
+  setQuranReciter: () => null,
+  availableReciters: availableReciters,
 });
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
@@ -48,7 +57,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const storedSettings = localStorage.getItem('app-settings');
       if (storedSettings) {
         // Merge stored settings with defaults to avoid breaking changes
-        setSettings(prev => ({ ...prev, ...JSON.parse(storedSettings) }));
+        const parsedSettings = JSON.parse(storedSettings);
+        if (!parsedSettings.quranReciter) {
+          parsedSettings.quranReciter = 'ar.alafasy';
+        }
+        setSettings(prev => ({ ...prev, ...parsedSettings }));
       }
     } catch (error) {
       console.error("Could not load settings", error);
@@ -86,6 +99,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(s => ({ ...s, quranEdition: edition }));
   };
 
+  const setQuranReciter = (reciter: string) => {
+    setSettings(s => ({...s, quranReciter: reciter}));
+  }
+
   const value = {
     settings,
     setFontSize,
@@ -93,6 +110,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setLanguage,
     setQuranViewMode,
     setQuranEdition,
+    setQuranReciter,
+    availableReciters,
   };
 
   return (
