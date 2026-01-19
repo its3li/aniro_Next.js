@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CategoryGrid } from '@/components/azkar/category-grid';
 import { azkarData, type AzkarCategory, type AzkarItem } from '@/lib/azkar';
 import { ZikrList } from '@/components/azkar/zikr-list';
@@ -16,6 +16,10 @@ export default function AzkarPage() {
 
   const currentLevel = navigationStack[navigationStack.length - 1];
   const parentLevel = navigationStack.length > 1 ? navigationStack[navigationStack.length - 2] : null;
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [navigationStack]);
 
   const handleSelect = (item: AzkarCategory | AzkarItem) => {
     if ('subCategories' in item || 'items' in item) {
