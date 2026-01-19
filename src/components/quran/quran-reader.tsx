@@ -162,7 +162,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
           </div>
         ) : (
           <div className="bg-foreground/5 p-6 rounded-2xl">
-            <p className="font-quran text-3xl leading-loose text-right">
+            <div className="font-quran text-3xl leading-loose text-right">
               {surah.verses.map(verse => {
                 const verseKey = `${surah.number}:${verse.number.inSurah}`;
                 const isPlaying = playerState.activeVerseKey === verseKey && playerState.isPlaying;
@@ -189,7 +189,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
                   </span>
                 </span>
               )})}
-            </p>
+            </div>
           </div>
         )}
       </div>
