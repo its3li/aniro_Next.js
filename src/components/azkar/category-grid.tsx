@@ -1,8 +1,27 @@
 import type { AzkarCategory, AzkarItem } from "@/lib/azkar";
-import Image from "next/image";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { ArrowRight } from "lucide-react";
-import { GlassCard } from "../glass-card";
+import {
+  ArrowRight,
+  Bed,
+  BookOpen,
+  Building2,
+  Calendar,
+  PersonStanding,
+  Sunrise,
+  Sunset,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Map icon names to components
+const icons: { [key: string]: React.ElementType } = {
+  Sunrise,
+  Sunset,
+  PersonStanding,
+  Bed,
+  Calendar,
+  BookOpen,
+  Building2,
+  Default: ArrowRight,
+};
 
 interface CategoryGridProps {
   categories: AzkarCategory[];
@@ -13,30 +32,22 @@ export function CategoryGrid({ categories, onSelect }: CategoryGridProps) {
   return (
     <div className="grid grid-cols-2 gap-4">
       {categories.map((category) => {
-        const placeholder = PlaceHolderImages.find(p => p.id === category.id);
+        const Icon = icons[category.icon] || icons.Default;
         return (
-          <GlassCard
+          <div
             key={category.id}
             onClick={() => onSelect(category)}
-            className="aspect-square flex flex-col justify-end p-4 relative overflow-hidden cursor-pointer transition-transform active:scale-95 hover:scale-[1.02]"
-          >
-            {placeholder && (
-              <Image
-                src={placeholder.imageUrl}
-                alt={category.name}
-                fill
-                className="object-cover z-0 opacity-20 dark:opacity-10"
-                data-ai-hint={placeholder.imageHint}
-              />
+            className={cn(
+              "aspect-square flex flex-col justify-end items-center text-center p-4 relative overflow-hidden cursor-pointer transition-transform active:scale-95 hover:scale-[1.02] rounded-3xl text-white bg-gradient-to-br shadow-lg",
+              category.color
             )}
+          >
+            <Icon className="absolute -top-2 -left-2 w-24 h-24 opacity-20 text-white" />
+            
             <div className="relative z-10">
-              <h3 className="font-bold text-lg font-headline">{category.name}</h3>
-              <p className="text-sm text-muted-foreground flex items-center">
-                View
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </p>
+              <h3 className="font-bold text-xl font-headline drop-shadow-md">{category.name}</h3>
             </div>
-          </GlassCard>
+          </div>
         );
       })}
     </div>
