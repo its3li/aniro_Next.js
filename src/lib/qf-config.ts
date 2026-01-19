@@ -1,4 +1,3 @@
-'use server';
 
 type QuranFoundationEnv = 'production' | 'pre-production';
 
