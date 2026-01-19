@@ -1,4 +1,12 @@
 
+export interface Word {
+  text: string;
+  tajweed: {
+    rule: string;
+    color: string;
+  } | null;
+}
+
 export interface Verse {
   number: {
     inQuran: number;
@@ -7,6 +15,7 @@ export interface Verse {
   text: string;
   translation: string;
   tafseer?: string;
+  words?: Word[];
 }
 
 export interface SurahInfo {

@@ -22,8 +22,8 @@ interface QuranReaderProps {
 }
 
 export function QuranReader({ surah, onBack }: QuranReaderProps) {
-  const { settings, setQuranViewMode } = useSettings();
-  const { quranViewMode, language } = settings;
+  const { settings, setQuranViewMode, setQuranEdition } = useSettings();
+  const { quranViewMode, language, quranEdition } = settings;
   const isArabic = language === 'ar';
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [isTafseerOpen, setTafseerOpen] = useState(false);
@@ -48,13 +48,14 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
           <div className="w-10"></div>
         </div>
         <div className="flex items-center justify-between mt-4 gap-4">
-            <Select defaultValue="uthmani" dir={isArabic ? 'rtl' : 'ltr'}>
+            <Select value={quranEdition} onValueChange={(value) => setQuranEdition(value as any)} dir={isArabic ? 'rtl' : 'ltr'}>
                 <SelectTrigger className="w-auto flex-1 bg-foreground/5 backdrop-blur-lg border-foreground/10 rounded-xl">
                     <SelectValue placeholder={isArabic ? "الرسم" : "Edition"} />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="uthmani">{isArabic ? "عثماني" : "Uthmani"}</SelectItem>
-                    <SelectItem value="tajweed" disabled>{isArabic ? "تجويد ملون" : "Color-coded Tajweed"}</SelectItem>
+                    <SelectItem value="uthmani">{isArabic ? "عثماني (حفص)" : "Uthmani (Hafs)"}</SelectItem>
+                    <SelectItem value="warsh" disabled>{isArabic ? "ورش عن نافع" : "Warsh an-Nafi'"}</SelectItem>
+                    <SelectItem value="tajweed">{isArabic ? "تجويد ملون" : "Color-coded Tajweed"}</SelectItem>
                 </SelectContent>
             </Select>
 
@@ -85,7 +86,15 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
                 className="bg-foreground/5 p-4 rounded-2xl cursor-pointer"
               >
                 <p className="text-right font-quran text-2xl leading-loose mb-4">
-                  {verse.text}
+                  {quranEdition === 'tajweed' && verse.words ? (
+                    verse.words.map((word, index) => (
+                      <span key={index} style={{ color: word.tajweed?.color || 'inherit' }}>
+                        {word.text}
+                      </span>
+                    ))
+                  ) : (
+                    verse.text
+                  )}
                   <span className="text-primary font-sans text-lg mx-2">
                     ({verse.number.inSurah})
                   </span>
@@ -99,7 +108,15 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
             <p className="font-quran text-3xl leading-loose text-right">
               {surah.verses.map(verse => (
                 <span key={verse.number.inSurah} onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }}>
-                  {verse.text}
+                   {quranEdition === 'tajweed' && verse.words ? (
+                    verse.words.map((word, index) => (
+                      <span key={index} style={{ color: word.tajweed?.color || 'inherit' }}>
+                        {word.text}
+                      </span>
+                    ))
+                  ) : (
+                    verse.text
+                  )}
                   <span className="text-primary font-sans text-xl mx-2">
                     ({verse.number.inSurah})
                   </span>

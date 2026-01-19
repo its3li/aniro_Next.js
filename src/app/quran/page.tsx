@@ -26,7 +26,12 @@ export default function QuranPage() {
       setIsLoading(true);
       try {
         const translationId = isArabic ? 20 : 131; // 20 for Tafsir Jalalayn (AR), 131 for Clear Quran (EN)
-        const response = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${selectedSurahInfo.number}?language=en&words=false&translations=${translationId}&fields=text_uthmani&per_page=all`);
+        
+        const editionIsTajweed = settings.quranEdition === 'tajweed';
+        const wordsParam = `words=${editionIsTajweed}`;
+        const wordFieldsParam = editionIsTajweed ? `&word_fields=text_uthmani,tajweed` : '';
+
+        const response = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${selectedSurahInfo.number}?language=en&${wordsParam}${wordFieldsParam}&translations=${translationId}&fields=text_uthmani&per_page=all`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -34,11 +39,24 @@ export default function QuranPage() {
         
         const data = await response.json();
 
-        const combinedVerses: Surah['verses'] = data.verses.map((verse: any) => ({
-          number: { inQuran: verse.id, inSurah: verse.verse_number },
-          text: verse.text_uthmani,
-          translation: verse.translations?.[0]?.text.replace(/<[^>]*>/g, '') || (isArabic ? 'التفسير غير متوفر' : 'Translation not available.'),
-        }));
+        const combinedVerses: Surah['verses'] = data.verses.map((verse: any) => {
+          const baseVerse = {
+            number: { inQuran: verse.id, inSurah: verse.verse_number },
+            text: verse.text_uthmani,
+            translation: verse.translations?.[0]?.text.replace(/<[^>]*>/g, '') || (isArabic ? 'التفسير غير متوفر' : 'Translation not available.'),
+          };
+
+          if (editionIsTajweed && verse.words) {
+              return {
+                  ...baseVerse,
+                  words: verse.words.map((word: any) => ({
+                      text: word.text_uthmani,
+                      tajweed: word.tajweed,
+                  })),
+              };
+          }
+          return baseVerse;
+        });
 
         setFullSurah({
           ...selectedSurahInfo,
@@ -59,7 +77,7 @@ export default function QuranPage() {
     };
 
     fetchSurah();
-  }, [selectedSurahInfo, toast, isArabic]);
+  }, [selectedSurahInfo, toast, isArabic, settings.quranEdition]);
 
   const handleBack = () => {
     setSelectedSurahInfo(null);

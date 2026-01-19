@@ -4,12 +4,14 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Language = 'en' | 'ar';
 type QuranViewMode = 'list' | 'page';
+type QuranEdition = 'uthmani' | 'tajweed';
 
 type Settings = {
   fontSize: number;
   prayerOffset: number;
   language: Language;
   quranViewMode: QuranViewMode;
+  quranEdition: QuranEdition;
 };
 
 type SettingsProviderState = {
@@ -18,6 +20,7 @@ type SettingsProviderState = {
   setPrayerOffset: (offset: number) => void;
   setLanguage: (language: Language) => void;
   setQuranViewMode: (mode: QuranViewMode) => void;
+  setQuranEdition: (edition: QuranEdition) => void;
 };
 
 const defaultSettings: Settings = {
@@ -25,6 +28,7 @@ const defaultSettings: Settings = {
   prayerOffset: 0,
   language: 'en',
   quranViewMode: 'list',
+  quranEdition: 'uthmani',
 };
 
 const SettingsProviderContext = createContext<SettingsProviderState>({
@@ -33,6 +37,7 @@ const SettingsProviderContext = createContext<SettingsProviderState>({
   setPrayerOffset: () => null,
   setLanguage: () => null,
   setQuranViewMode: () => null,
+  setQuranEdition: () => null,
 });
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
@@ -76,6 +81,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const setQuranViewMode = (mode: QuranViewMode) => {
     setSettings(s => ({ ...s, quranViewMode: mode }));
   };
+  
+  const setQuranEdition = (edition: QuranEdition) => {
+    setSettings(s => ({ ...s, quranEdition: edition }));
+  };
 
   const value = {
     settings,
@@ -83,6 +92,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setPrayerOffset,
     setLanguage,
     setQuranViewMode,
+    setQuranEdition,
   };
 
   return (
