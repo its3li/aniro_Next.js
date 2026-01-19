@@ -1,26 +1,33 @@
+
 'use client';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+
+type Language = 'en' | 'ar';
 
 type Settings = {
   fontSize: number;
   prayerOffset: number;
+  language: Language;
 };
 
 type SettingsProviderState = {
   settings: Settings;
   setFontSize: (size: number) => void;
   setPrayerOffset: (offset: number) => void;
+  setLanguage: (language: Language) => void;
 };
 
 const defaultSettings: Settings = {
   fontSize: 16,
   prayerOffset: 0,
+  language: 'en',
 };
 
 const SettingsProviderContext = createContext<SettingsProviderState>({
   settings: defaultSettings,
   setFontSize: () => null,
   setPrayerOffset: () => null,
+  setLanguage: () => null,
 });
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
@@ -41,6 +48,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('app-settings', JSON.stringify(settings));
       document.body.style.fontSize = `${settings.fontSize}px`;
+      document.documentElement.dir = settings.language === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.lang = settings.language;
     } catch (error) {
       console.error("Could not save settings", error);
     }
@@ -54,10 +63,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(s => ({ ...s, prayerOffset: offset }));
   };
 
+  const setLanguage = (language: Language) => {
+    setSettings(s => ({...s, language }));
+  };
+
   const value = {
     settings,
     setFontSize,
     setPrayerOffset,
+    setLanguage,
   };
 
   return (

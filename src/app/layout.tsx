@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -8,7 +9,7 @@ import { BottomNav } from '@/components/bottom-nav';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Munawwar',
+  title: 'Aniro',
   description: 'An elegant Islamic lifestyle application.',
 };
 

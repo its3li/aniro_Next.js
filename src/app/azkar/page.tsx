@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -6,10 +7,12 @@ import { azkarData, type AzkarCategory, type AzkarItem } from '@/lib/azkar';
 import { ZikrList } from '@/components/azkar/zikr-list';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { GlassCard } from '@/components/glass-card';
+import { useSettings } from '@/components/providers/settings-provider';
 
 export default function AzkarPage() {
   const [navigationStack, setNavigationStack] = useState<AzkarCategory[]>([azkarData]);
+  const { settings } = useSettings();
+  const isArabic = settings.language === 'ar';
 
   const currentLevel = navigationStack[navigationStack.length - 1];
   const parentLevel = navigationStack.length > 1 ? navigationStack[navigationStack.length - 2] : null;
@@ -38,7 +41,7 @@ export default function AzkarPage() {
           </Button>
         )}
         <div>
-          <h1 className="text-3xl font-bold font-headline">{currentLevel.name}</h1>
+          <h1 className="text-3xl font-bold font-headline">{isArabic && currentLevel.id === 'root' ? 'الأذكار' : currentLevel.name}</h1>
           {parentLevel && <p className="text-muted-foreground">{parentLevel.name}</p>}
         </div>
       </div>

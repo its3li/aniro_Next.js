@@ -1,18 +1,18 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, Sparkles, Settings as SettingsIcon, Hand } from 'lucide-react';
+import { Home, BookOpen, Sparkles, Settings as SettingsIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettings } from './providers/settings-provider';
 import { useEffect, useState } from 'react';
 
 const navItems = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/quran', label: 'Quran', icon: BookOpen },
-  { href: '/azkar', label: 'Azkar', icon: Sparkles },
-  { href: '/tasbeeh', label: 'Tasbeeh', icon: Hand },
-  { href: '/settings', label: 'Settings', icon: SettingsIcon },
+  { href: '/', label: 'Home', labelAr: 'الرئيسية', icon: Home },
+  { href: '/quran', label: 'Quran', labelAr: 'القرآن', icon: BookOpen },
+  { href: '/azkar', label: 'Azkar', labelAr: 'الأذكار', icon: Sparkles },
+  { href: '/settings', label: 'Settings', labelAr: 'الإعدادات', icon: SettingsIcon },
 ];
 
 export function BottomNav() {
@@ -24,12 +24,14 @@ export function BottomNav() {
     setIsClient(true);
   }, []);
 
+  const isArabic = settings.language === 'ar';
 
   return (
     <nav className="fixed bottom-4 left-1/2 z-50 w-[90%] max-w-md -translate-x-1/2">
       <div style={isClient ? { fontSize: `${settings.fontSize}px`} : {}} className="bg-background/70 backdrop-blur-xl border border-foreground/10 rounded-full p-2 flex justify-around items-center shadow-2xl shadow-black/20">
         {navItems.map((item) => {
           const isActive = (item.href === '/' && pathname === '/') || (item.href !== '/' && pathname.startsWith(item.href));
+          const label = isArabic ? item.labelAr : item.label;
           return (
             <Link href={item.href} key={item.label} className="relative z-10 flex-1 flex justify-center items-center h-14">
               <div
@@ -45,7 +47,7 @@ export function BottomNav() {
                   )}
                 ></div>
                 <item.icon className="w-5 h-5 z-10" />
-                <span className="text-[10px] font-medium z-10">{item.label}</span>
+                <span className="text-[10px] font-medium z-10">{label}</span>
               </div>
             </Link>
           );

@@ -1,3 +1,4 @@
+
 'use client';
 import { GlassCard, GlassCardContent, GlassCardHeader } from '../glass-card';
 import { Label } from '@/components/ui/label';
@@ -8,6 +9,7 @@ import { Minus, Plus } from 'lucide-react';
 
 export function CustomizationSettings() {
   const { settings, setFontSize, setPrayerOffset } = useSettings();
+  const isArabic = settings.language === 'ar';
 
   const handlePrayerOffsetChange = (change: number) => {
     const newOffset = settings.prayerOffset + change;
@@ -19,12 +21,12 @@ export function CustomizationSettings() {
   return (
     <GlassCard>
       <GlassCardHeader>
-        <h2 className="text-xl font-bold font-headline">Customization</h2>
+        <h2 className="text-xl font-bold font-headline">{isArabic ? 'تخصيص' : 'Customization'}</h2>
       </GlassCardHeader>
       <GlassCardContent>
         <div className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="font-size-slider">Font Size</Label>
+            <Label htmlFor="font-size-slider">{isArabic ? 'حجم الخط' : 'Font Size'}</Label>
             <div className='flex items-center gap-4'>
                 <span className='text-sm'>A</span>
                 <Slider
@@ -39,7 +41,7 @@ export function CustomizationSettings() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="prayer-offset">Prayer Time Offset (Hours)</Label>
+            <Label htmlFor="prayer-offset">{isArabic ? 'تعديل مواقيت الصلاة (ساعات)' : 'Prayer Time Offset (Hours)'}</Label>
             <div className='flex items-center gap-4'>
                 <Button variant="outline" size="icon" onClick={() => handlePrayerOffsetChange(-1)}>
                     <Minus />

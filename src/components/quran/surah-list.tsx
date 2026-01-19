@@ -1,11 +1,12 @@
+
 'use client';
 import { useState, useMemo } from 'react';
-import { surahs, type Surah } from '@/lib/quran';
+import { surahs, type SurahInfo } from '@/lib/quran';
 import { Input } from '@/components/ui/input';
 import { GlassCard } from '../glass-card';
 
 interface SurahListProps {
-  onSurahSelect: (surah: Surah) => void;
+  onSurahSelect: (surah: SurahInfo) => void;
 }
 
 export function SurahList({ onSurahSelect }: SurahListProps) {
