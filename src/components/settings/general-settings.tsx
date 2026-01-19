@@ -1,4 +1,3 @@
-
 'use client';
 import { GlassCard, GlassCardContent, GlassCardHeader } from '../glass-card';
 import { Switch } from '@/components/ui/switch';
@@ -18,9 +17,9 @@ export function GeneralSettings() {
       </GlassCardHeader>
       <GlassCardContent>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <Label htmlFor="language-switch">{isArabic ? 'اللغة' : 'Language'}</Label>
-            <div className='flex items-center gap-2 text-sm'>
+            <div className='flex items-center gap-2 text-sm flex-shrink-0'>
               <span>English</span>
               <Switch
                 id="language-switch"
@@ -30,10 +29,11 @@ export function GeneralSettings() {
               <span>عربي</span>
             </div>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <Label htmlFor="dark-mode-switch">{isArabic ? 'الوضع الداكن' : 'Dark Mode'}</Label>
             <Switch
               id="dark-mode-switch"
+              className="flex-shrink-0"
               checked={theme === 'dark'}
               onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
             />
