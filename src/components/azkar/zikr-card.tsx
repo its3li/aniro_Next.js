@@ -64,11 +64,11 @@ export function ZikrCard({ item }: ZikrCardProps) {
                 </Button>
                 <div 
                   className={cn(
-                    "relative w-24 h-24 flex items-center justify-center rounded-full text-3xl font-bold font-mono transition-colors",
+                    "relative w-20 h-20 flex items-center justify-center rounded-full text-2xl font-bold font-mono transition-colors",
                     isCompleted ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
                   )}
                 >
-                  {isCompleted ? <Check className="w-10 h-10" /> : count}
+                  {isCompleted ? <Check className="w-8 h-8" /> : count}
                 </div>
                  {/* This div is for spacing to keep the counter centered */}
                  <div className="w-10 h-10"></div>
