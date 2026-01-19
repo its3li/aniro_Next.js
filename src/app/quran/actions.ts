@@ -29,7 +29,6 @@ async function getQfAuthToken() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'x-client-id': config.clientId,
         },
         body: body.toString(),
         cache: 'no-store' // Ensure we don't cache this POST request
