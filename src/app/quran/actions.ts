@@ -17,7 +17,7 @@ async function getQfAuthToken() {
         return authToken.token;
     }
 
-    const config = getQfConfig();
+    const config = await getQfConfig();
     const response = await fetch(`${config.authBaseUrl}/token`, {
         method: 'POST',
         headers: {
@@ -47,7 +47,7 @@ async function getQfAuthToken() {
 }
 
 export async function getSurahTajweed(chapterNumber: number): Promise<VerseTajweed[]> {
-    const config = getQfConfig();
+    const config = await getQfConfig();
     const token = await getQfAuthToken();
 
     const response = await fetch(`${config.apiBaseUrl}/content/api/v4/quran/verses/uthmani_tajweed?chapter_number=${chapterNumber}`, {

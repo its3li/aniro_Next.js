@@ -22,7 +22,7 @@ const configMap: Record<QuranFoundationEnv, { authBaseUrl: string; apiBaseUrl: s
 
 let cachedConfig: QuranFoundationConfig | null = null;
 
-export function getQfConfig(): QuranFoundationConfig {
+export async function getQfConfig(): Promise<QuranFoundationConfig> {
   if (cachedConfig) {
     return cachedConfig;
   }
