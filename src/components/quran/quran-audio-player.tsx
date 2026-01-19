@@ -3,11 +3,9 @@
 
 import { GlassCard } from '../glass-card';
 import { Button } from '../ui/button';
-import { Pause, Play, Repeat, SkipBack, SkipForward, X } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
 import { Slider } from '../ui/slider';
 import { useSettings } from '../providers/settings-provider';
-import { cn } from '@/lib/utils';
 import { useAudioPlayer } from '../providers/audio-player-provider';
 
 export function QuranAudioPlayer() {
@@ -17,12 +15,11 @@ export function QuranAudioPlayer() {
     handleNext,
     handlePrev,
     handleSeek,
-    handleRepeatToggle,
     handlePlayerClose,
     getVerseByKey
   } = useAudioPlayer();
 
-  const { settings, setQuranReciter, availableReciters } = useSettings();
+  const { settings } = useSettings();
   const isArabic = settings.language === 'ar';
 
   const {
@@ -30,8 +27,6 @@ export function QuranAudioPlayer() {
     activeVerseKey,
     progress,
     duration,
-    isRepeating,
-    isContinuous,
     surah
   } = playerState;
 
@@ -70,22 +65,7 @@ export function QuranAudioPlayer() {
         <span className="text-xs font-mono w-10 text-center">{formatTime(duration)}</span>
       </div>
 
-      <div className="flex items-center justify-between mt-2">
-        <div className='w-24'>
-          <Select value={settings.quranReciter} onValueChange={setQuranReciter}>
-            <SelectTrigger className="w-auto bg-transparent border-none focus:ring-0 h-10 px-2">
-              <SelectValue placeholder={isArabic ? 'القارئ' : 'Reciter'} />
-            </SelectTrigger>
-            <SelectContent>
-              {availableReciters.map((reciter) => (
-                <SelectItem key={reciter.identifier} value={reciter.identifier}>
-                  {isArabic ? reciter.name : reciter.englishName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
+      <div className="flex items-center justify-center mt-2">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={handlePrev} className="rounded-full">
             <SkipBack />
@@ -95,22 +75,6 @@ export function QuranAudioPlayer() {
           </Button>
           <Button variant="ghost" size="icon" onClick={handleNext} className="rounded-full">
             <SkipForward />
-          </Button>
-        </div>
-
-        <div className='w-24 flex justify-end'>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleRepeatToggle}
-            disabled={isContinuous}
-            className={cn(
-              "rounded-full",
-              isRepeating && !isContinuous && 'text-primary bg-primary/10',
-              isContinuous && 'opacity-50 cursor-not-allowed'
-            )}
-          >
-            <Repeat />
           </Button>
         </div>
       </div>

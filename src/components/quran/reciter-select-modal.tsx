@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '../ui/scroll-area';
 import { useSettings } from '../providers/settings-provider';
-import type { Reciter } from '@/lib/reciters';
 import { Button } from '../ui/button';
 import { CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';

@@ -1,3 +1,4 @@
+
 'use client';
 import { useAudioPlayer } from './providers/audio-player-provider';
 import { QuranAudioPlayer } from './quran/quran-audio-player';
