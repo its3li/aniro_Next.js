@@ -87,12 +87,8 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
                 className="bg-foreground/5 p-4 rounded-2xl cursor-pointer"
               >
                 <p className="text-right font-quran text-2xl leading-loose mb-4">
-                  {quranEdition === 'tajweed' && verse.words ? (
-                    verse.words.map((word, index) => (
-                      <span key={index} style={{ color: word.tajweed?.color || 'inherit' }}>
-                        {word.text}
-                      </span>
-                    ))
+                  {quranEdition === 'tajweed' && verse.text_uthmani_tajweed ? (
+                    <span dangerouslySetInnerHTML={{ __html: verse.text_uthmani_tajweed }} />
                   ) : (
                     verse.text
                   )}
@@ -109,14 +105,10 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
             <p className="font-quran text-3xl leading-loose text-right">
               {surah.verses.map(verse => (
                 <span key={verse.number.inSurah} onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }}>
-                   {quranEdition === 'tajweed' && verse.words ? (
-                    verse.words.map((word, index) => (
-                      <span key={index} style={{ color: word.tajweed?.color || 'inherit' }}>
-                        {word.text}
-                      </span>
-                    ))
+                   {quranEdition === 'tajweed' && verse.text_uthmani_tajweed ? (
+                    <span dangerouslySetInnerHTML={{ __html: verse.text_uthmani_tajweed }} />
                   ) : (
-                    verse.text
+                    <span>{verse.text}</span>
                   )}
                   <span className="text-primary font-sans text-xl mx-2">
                     ({verse.number.inSurah})

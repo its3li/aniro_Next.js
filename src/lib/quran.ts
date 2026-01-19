@@ -16,6 +16,7 @@ export interface Verse {
   translation: string;
   tafseer?: string;
   words?: Word[];
+  text_uthmani_tajweed?: string;
 }
 
 export interface SurahInfo {
