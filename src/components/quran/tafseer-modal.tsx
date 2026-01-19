@@ -12,16 +12,17 @@ import { useToast } from '@/hooks/use-toast';
 import type { Verse } from '@/lib/quran';
 import { Copy, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { generateTafseer } from '@/ai/flows/tafseer-flow';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface TafseerModalProps {
   verse: Verse;
   surahName: string;
+  surahNumber: number;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function TafseerModal({ verse, surahName, isOpen, onClose }: TafseerModalProps) {
+export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }: TafseerModalProps) {
   const { toast } = useToast();
   const [tafseerContent, setTafseerContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,19 +33,30 @@ export function TafseerModal({ verse, surahName, isOpen, onClose }: TafseerModal
         setIsLoading(true);
         setTafseerContent(null);
         try {
-          const result = await generateTafseer({
-            surahName,
-            verseNumber: verse.number.inSurah,
-            verseText: verse.text,
-            verseTranslation: verse.translation,
-          });
-          setTafseerContent(result.tafseer);
+          const verseKey = `${surahNumber}:${verse.number.inSurah}`;
+          // Using Tafsir Ibn Kathir (id: 169) from quran.com API
+          const response = await fetch(`https://api.quran.com/api/v4/quran/tafsirs/169?verse_key=${verseKey}`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          
+          let tafseerText = data.tafsirs[0]?.text;
+
+          if (!tafseerText) {
+            throw new Error("Tafseer not found for this verse.");
+          }
+
+          // The text from the API contains HTML, so we strip it for plain text display.
+          tafseerText = tafseerText.replace(/<[^>]*>/g, '');
+
+          setTafseerContent(tafseerText);
         } catch (error) {
-          console.error("Failed to generate Tafseer:", error);
-          setTafseerContent("Sorry, we couldn't generate the explanation for this verse at the moment.");
+          console.error("Failed to fetch Tafseer:", error);
+          setTafseerContent("Sorry, we couldn't fetch the explanation for this verse at the moment.");
           toast({
             variant: "destructive",
-            title: "Tafseer Generation Failed",
+            title: "Tafseer Fetch Failed",
             description: "Please try again later.",
           });
         } finally {
@@ -54,7 +66,7 @@ export function TafseerModal({ verse, surahName, isOpen, onClose }: TafseerModal
 
       fetchTafseer();
     }
-  }, [isOpen, verse, surahName, toast]);
+  }, [isOpen, verse, surahName, surahNumber, toast]);
 
   const handleCopy = () => {
     const textToCopy = `${verse.text}\n\n${verse.translation}\n\nTafseer:\n${tafseerContent || ''}\n- Quran, ${surahName} ${verse.number.inSurah}`;
@@ -78,15 +90,17 @@ export function TafseerModal({ verse, surahName, isOpen, onClose }: TafseerModal
             {isLoading && (
               <div className="flex items-center justify-center gap-2 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Generating explanation...</span>
+                <span>Fetching explanation...</span>
               </div>
             )}
             {tafseerContent && (
                 <>
-                    <p>
-                        {tafseerContent}
-                    </p>
-                    <p className='text-sm text-muted-foreground'>Powered by AI</p>
+                    <ScrollArea className="h-48 pr-4">
+                      <p className="text-sm">
+                          {tafseerContent}
+                      </p>
+                    </ScrollArea>
+                    <p className='text-sm text-muted-foreground'>Source: Tafsir Ibn Kathir (quran.com API)</p>
                 </>
             )}
         </div>

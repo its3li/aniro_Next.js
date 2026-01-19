@@ -110,6 +110,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
         <TafseerModal 
           verse={selectedVerse} 
           surahName={surah.englishName}
+          surahNumber={surah.number}
           isOpen={isTafseerOpen} 
           onClose={() => setTafseerOpen(false)} 
         />
