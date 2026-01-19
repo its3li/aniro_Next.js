@@ -84,9 +84,50 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
     });
   }, [cleanupAudio]);
 
+  const fillAudioQueue = useCallback(async (startVerseIndex: number) => {
+    if (startVerseIndex >= surah.verses.length) return;
+    
+    const versesToQueue = surah.verses.slice(startVerseIndex, startVerseIndex + 5);
+    const promises = versesToQueue.map(async (verse) => {
+        try {
+            const verseRef = `${surah.number}:${verse.number.inSurah}`;
+            const response = await fetch(`https://api.alquran.cloud/v1/ayah/${verseRef}/${quranReciter}`);
+            if (!response.ok) return null;
+            const data = await response.json();
+            if (data.code !== 200 || !data.data.audio) return null;
+            return { verseKey: verseRef, url: data.data.audio };
+        } catch {
+            return null;
+        }
+    });
+    const results = (await Promise.all(promises)).filter((r): r is { verseKey: string; url: string } => r !== null);
+    const existingKeys = new Set(audioQueueRef.current.map(item => item.verseKey));
+    const newItems = results.filter(item => !existingKeys.has(item.verseKey));
+    audioQueueRef.current.push(...newItems);
+  }, [quranReciter, surah.number, surah.verses]);
+
   const playNextInQueue = useCallback(() => {
+    // Proactively fill queue for continuous play
+    if (playerStateRef.current.isContinuous) {
+      // When we are about to play the 4th verse of a 5-verse batch, 
+      // the queue will have 2 items left. This is the time to load more.
+      if (audioQueueRef.current.length === 2) {
+        const lastQueuedVerseKey = audioQueueRef.current[audioQueueRef.current.length - 1].verseKey;
+        const lastVerse = getVerseByKey(lastQueuedVerseKey);
+        if (lastVerse) {
+          const lastVerseIndex = surah.verses.findIndex(v => v.number.inSurah === lastVerse.number.inSurah);
+          const nextVerseIndexToQueue = lastVerseIndex + 1;
+          if (nextVerseIndexToQueue < surah.verses.length) {
+            fillAudioQueue(nextVerseIndexToQueue);
+          }
+        }
+      }
+    }
+
     if (audioQueueRef.current.length === 0) {
-      handlePlayerClose();
+      if (playerStateRef.current.isContinuous) {
+        handlePlayerClose(); // Surah finished
+      }
       return;
     }
   
@@ -119,11 +160,8 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
     };
     newAudio.onended = () => {
       if (isSeekingRef.current) return;
+      
       if (playerStateRef.current.isContinuous) {
-        const currentVerseIndex = surah.verses.findIndex(v => `${surah.number}:${v.number.inSurah}` === verseKey);
-        if (audioQueueRef.current.length < 5 && currentVerseIndex < surah.verses.length - 1) {
-            fillAudioQueue(currentVerseIndex + audioQueueRef.current.length + 1);
-        }
         playNextInQueue();
       } else if (playerStateRef.current.isRepeating) {
         newAudio.currentTime = 0;
@@ -134,33 +172,14 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
     };
   
     newAudio.play().catch(newAudio.onerror);
-  }, [getVerseByKey, handlePlayerClose, surah.number, surah.verses]);
-
-  const fillAudioQueue = useCallback(async (startVerseIndex: number) => {
-    const versesToQueue = surah.verses.slice(startVerseIndex, startVerseIndex + 10);
-    const promises = versesToQueue.map(async (verse) => {
-        try {
-            const verseRef = `${surah.number}:${verse.number.inSurah}`;
-            const response = await fetch(`https://api.alquran.cloud/v1/ayah/${verseRef}/${quranReciter}`);
-            if (!response.ok) return null;
-            const data = await response.json();
-            if (data.code !== 200 || !data.data.audio) return null;
-            return { verseKey: verseRef, url: data.data.audio };
-        } catch {
-            return null;
-        }
-    });
-    const results = (await Promise.all(promises)).filter((r): r is { verseKey: string; url: string } => r !== null);
-    const existingKeys = new Set(audioQueueRef.current.map(item => item.verseKey));
-    const newItems = results.filter(item => !existingKeys.has(item.verseKey));
-    audioQueueRef.current.push(...newItems);
-  }, [quranReciter, surah.number, surah.verses]);
+  }, [getVerseByKey, handlePlayerClose, surah.verses, fillAudioQueue]);
 
   const startPlayback = useCallback(async (verseKey: string, isContinuous: boolean) => {
     cleanupAudio();
     setPlayerState(s => ({
       ...s,
       isContinuous: isContinuous,
+      // Disable repeating when continuous play is active
       isRepeating: isContinuous ? false : s.isRepeating,
       activeVerseKey: verseKey,
       showPlayer: true,

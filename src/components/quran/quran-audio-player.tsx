@@ -59,7 +59,7 @@ export function QuranAudioPlayer({
   };
 
   return (
-    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[95%] max-w-lg z-50 animate-fade-slide-in">
+    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[95%] max-w-lg z-50 animate-fade-slide-in">
       <GlassCard className="p-4">
         <div className="flex items-center justify-between">
           <div>
