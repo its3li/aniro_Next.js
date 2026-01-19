@@ -38,7 +38,7 @@ export default function QuranPage() {
         const combinedVerses: Surah['verses'] = data.verses.map((verse: any) => ({
           number: { inQuran: verse.id, inSurah: verse.verse_number },
           text: verse.text_uthmani,
-          translation: verse.translations[0]?.text.replace(/<[^>]*>/g, '') || 'Translation not available.',
+          translation: verse.translations?.[0]?.text.replace(/<[^>]*>/g, '') || 'Translation not available.',
         }));
 
         setFullSurah({
