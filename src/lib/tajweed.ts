@@ -14,15 +14,17 @@ export const tajweedRulesMap = {
     a: { className: 'idgh_ghn', type: 'idgham-with-ghunnah', description: 'Idgham - With Ghunnah' },
     u: { className: 'idgh_w_ghn', type: 'idgham-without-ghunnah', description: 'Idgham - Without Ghunnah' },
     d: { className: 'idgh_mus', type: 'idgham-mutajanisayn', description: 'Idgham - Mutajanisayn' },
-    b: { className: 'idgh_mus', type: 'idgham-mutaqaribayn', description: 'Idgham - Mutaqaribayn' },
+    b: { className: 'idgh_mut', type: 'idgham-mutaqaribayn', description: 'Idgham - Mutaqaribayn' },
     g: { className: 'ghn', type: 'ghunnah', description: 'Ghunnah: 2 Vowels' }
   };
   
   export function parseTajweed(text: string): string {
     if (!text) return '';
   
-    // This regex now handles optional IDs for tajweed rules.
-    const regex = /\[([a-z])(?::(\d+))?\[([^\[\]]+)\]\]/g;
+    // Regex to find patterns like [h:1[ٱ]] or [l[ل]].
+    // It captures the rule identifier, an optional ID, and the content.
+    // The content part (.*?) is non-greedy to handle nested or adjacent rules correctly.
+    const regex = /\[([a-z])(?::(\d+))?\[(.*?)\]/g;
   
     return text.replace(regex, (match, identifier, id, content) => {
       const rule = tajweedRulesMap[identifier as keyof typeof tajweedRulesMap];
@@ -31,7 +33,7 @@ export const tajweedRulesMap = {
         const idAttribute = id ? ` data-tajweed=":${id}"` : '';
         return `<tajweed class="${rule.className}" data-type="${rule.type}" data-description="${rule.description}"${idAttribute}>${content}</tajweed>`;
       }
-      // If the rule identifier is not found, just return the content without the tags.
-      return content;
+      // If the rule identifier is not found, return the original matched string as a fallback.
+      return match;
     });
   }
