@@ -4,6 +4,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useTheme } from '../providers/theme-provider';
 import { useSettings } from '../providers/settings-provider';
+import { cn } from '@/lib/utils';
 
 export function GeneralSettings() {
   const { theme, setTheme } = useTheme();
@@ -16,25 +17,31 @@ export function GeneralSettings() {
         <h2 className="text-xl font-bold font-headline">{isArabic ? 'عام' : 'General'}</h2>
       </GlassCardHeader>
       <GlassCardContent>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="language-switch">{isArabic ? 'اللغة' : 'Language'}</Label>
-            <div className='flex items-center gap-2 text-sm'>
-              <span>English</span>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between p-2 rounded-lg">
+            <Label htmlFor="language-switch" className="font-medium">{isArabic ? 'اللغة' : 'Language'}</Label>
+            <div className="flex items-center gap-3">
+              <span className={cn("text-sm font-medium", settings.language === 'en' ? 'text-primary' : 'text-muted-foreground')}>
+                English
+              </span>
               <Switch
                 id="language-switch"
                 checked={settings.language === 'ar'}
                 onCheckedChange={(checked) => setLanguage(checked ? 'ar' : 'en')}
+                dir="ltr"
               />
-              <span>عربي</span>
+              <span className={cn("text-sm font-medium", settings.language === 'ar' ? 'text-primary' : 'text-muted-foreground')}>
+                عربي
+              </span>
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="dark-mode-switch">{isArabic ? 'الوضع الداكن' : 'Dark Mode'}</Label>
+          <div className="flex items-center justify-between p-2 rounded-lg">
+            <Label htmlFor="dark-mode-switch" className="font-medium">{isArabic ? 'الوضع الداكن' : 'Dark Mode'}</Label>
             <Switch
               id="dark-mode-switch"
               checked={theme === 'dark'}
               onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+              dir="ltr"
             />
           </div>
         </div>
