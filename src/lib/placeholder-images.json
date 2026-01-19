@@ -1,3 +1,40 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "morning-azkar",
+      "description": "Abstract sunrise colors for morning supplications.",
+      "imageUrl": "https://images.unsplash.com/photo-1572635195926-82e5bf2beaa4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzdW5yaXNlJTIwYWJzdHJhY3R8ZW58MHx8fHwxNzY4ODIzODY0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sunrise abstract"
+    },
+    {
+      "id": "evening-azkar",
+      "description": "Abstract sunset colors for evening supplications.",
+      "imageUrl": "https://images.unsplash.com/photo-1713257510109-4cbfec05ff1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzdW5zZXQlMjBhYnN0cmFjdHxlbnwwfHx8fDE3Njg4MjM4NjR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sunset abstract"
+    },
+    {
+      "id": "before-sleep-azkar",
+      "description": "A calm, starry night sky for before-sleep supplications.",
+      "imageUrl": "https://images.unsplash.com/photo-1477840539360-4a1d23071046?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxuaWdodCUyMHNreXxlbnwwfHx8fDE3Njg3MTczMzl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "night sky"
+    },
+    {
+      "id": "after-prayer-azkar",
+      "description": "A tranquil mosque interior for after-prayer supplications.",
+      "imageUrl": "https://images.unsplash.com/photo-1495846192701-65d0d48e66fe?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxtb3NxdWUlMjBpbnRlcmlvcnxlbnwwfHx8fDE3Njg3Nzc1MjF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mosque interior"
+    },
+    {
+      "id": "mosque-azkar",
+      "description": "An architectural detail of a mosque.",
+      "imageUrl": "https://images.unsplash.com/photo-1535117423468-de0ff056882e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtb3NxdWUlMjBhcmNoaXRlY3R1cmV8ZW58MHx8fHwxNzY4NzQzNzA0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mosque architecture"
+    },
+    {
+      "id": "wakeup-azkar",
+      "description": "Sunlight streaming through a window.",
+      "imageUrl": "https://images.unsplash.com/photo-1719747906196-953df4ebab06?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzdW5saWdodCUyMHdpbmRvd3xlbnwwfHx8fDE3Njg3ODMzNzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sunlight window"
+    }
+  ]
 }
