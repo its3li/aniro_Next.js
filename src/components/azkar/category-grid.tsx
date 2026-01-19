@@ -10,6 +10,7 @@ import {
   Sunset,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSettings } from "../providers/settings-provider";
 
 // Map icon names to components
 const icons: { [key:string]: React.ElementType } = {
@@ -29,10 +30,14 @@ interface CategoryGridProps {
 }
 
 export function CategoryGrid({ categories, onSelect }: CategoryGridProps) {
+  const { settings } = useSettings();
+  const isArabic = settings.language === 'ar';
+
   return (
     <div className="grid grid-cols-2 gap-4">
       {categories.map((category) => {
         const Icon = icons[category.icon] || icons.Default;
+        const name = isArabic ? category.nameAr : category.name;
         return (
           <div
             key={category.id}
@@ -43,7 +48,7 @@ export function CategoryGrid({ categories, onSelect }: CategoryGridProps) {
             )}
           >
             <Icon className="w-1/3 h-1/3 drop-shadow-md" />
-            <h3 className="font-bold text-lg mt-2 font-headline drop-shadow-md">{category.name}</h3>
+            <h3 className="font-bold text-lg mt-2 font-headline drop-shadow-md">{name}</h3>
           </div>
         );
       })}

@@ -31,6 +31,9 @@ export default function AzkarPage() {
 
   const hasSubcategories = currentLevel.subCategories && currentLevel.subCategories.length > 0;
   const hasItems = currentLevel.items && currentLevel.items.length > 0;
+  
+  const currentName = isArabic ? (currentLevel.id === 'root' ? 'الأذكار' : currentLevel.nameAr) : currentLevel.name;
+  const parentName = parentLevel ? (isArabic ? parentLevel.nameAr : parentLevel.name) : '';
 
   return (
     <div className="p-4 md:p-6 animate-fade-slide-in">
@@ -41,8 +44,8 @@ export default function AzkarPage() {
           </Button>
         )}
         <div>
-          <h1 className="text-3xl font-bold font-headline">{isArabic && currentLevel.id === 'root' ? 'الأذكار' : currentLevel.name}</h1>
-          {parentLevel && <p className="text-muted-foreground">{parentLevel.name}</p>}
+          <h1 className="text-3xl font-bold font-headline">{currentName}</h1>
+          {parentLevel && <p className="text-muted-foreground">{parentName}</p>}
         </div>
       </div>
       

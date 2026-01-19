@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { surahs, type SurahInfo } from '@/lib/quran';
 import { Input } from '@/components/ui/input';
 import { GlassCard } from '../glass-card';
+import { useSettings } from '../providers/settings-provider';
 
 interface SurahListProps {
   onSurahSelect: (surah: SurahInfo) => void;
@@ -11,6 +12,8 @@ interface SurahListProps {
 
 export function SurahList({ onSurahSelect }: SurahListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const { settings } = useSettings();
+  const isArabic = settings.language === 'ar';
 
   const filteredSurahs = useMemo(() => {
     if (!searchTerm) return surahs;
@@ -27,7 +30,7 @@ export function SurahList({ onSurahSelect }: SurahListProps) {
     <div className="flex flex-col gap-4">
       <Input
         type="search"
-        placeholder="Search Surahs by name or number..."
+        placeholder={isArabic ? "ابحث عن السور بالاسم أو الرقم..." : "Search Surahs by name or number..."}
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         className="bg-foreground/5 backdrop-blur-lg border-foreground/10 rounded-xl h-12"
@@ -44,13 +47,13 @@ export function SurahList({ onSurahSelect }: SurahListProps) {
                 {surah.number}
               </span>
               <div>
-                <p className="font-bold font-headline">{surah.englishName}</p>
-                <p className="text-sm text-muted-foreground">{surah.englishNameTranslation}</p>
+                <p className="font-bold font-headline">{isArabic ? surah.name : surah.englishName}</p>
+                <p className="text-sm text-muted-foreground">{isArabic ? surah.englishName : surah.englishNameTranslation}</p>
               </div>
             </div>
             <div className="text-right">
-                <p className="font-quran text-2xl">{surah.name}</p>
-                <p className="text-sm text-muted-foreground">{surah.numberOfAyahs} verses</p>
+                <p className="font-quran text-2xl">{isArabic ? surah.englishName : surah.name}</p>
+                <p className="text-sm text-muted-foreground">{surah.numberOfAyahs} {isArabic ? 'آيات' : 'verses'}</p>
             </div>
           </GlassCard>
         ))}

@@ -7,6 +7,7 @@ export interface AzkarItem {
 export interface AzkarCategory {
     id: string;
     name: string;
+    nameAr: string;
     icon: string; // Name of the lucide-react icon
     color: string; // Tailwind CSS gradient class
     subCategories?: AzkarCategory[];
@@ -16,12 +17,14 @@ export interface AzkarCategory {
 export const azkarData: AzkarCategory = {
     id: 'root',
     name: 'Categories',
+    nameAr: 'الأصناف',
     icon: 'LayoutGrid',
     color: '',
     subCategories: [
       {
         id: 'morning-azkar',
         name: 'Morning Azkar',
+        nameAr: 'أذكار الصباح',
         icon: 'Sunrise',
         color: 'from-yellow-400 to-orange-500',
         items: [
@@ -45,6 +48,7 @@ export const azkarData: AzkarCategory = {
       {
         id: 'evening-azkar',
         name: 'Evening Azkar',
+        nameAr: 'أذكار المساء',
         icon: 'Sunset',
         color: 'from-orange-500 to-red-600',
         items: [
@@ -63,6 +67,7 @@ export const azkarData: AzkarCategory = {
       {
         id: 'after-prayer-azkar',
         name: 'After Prayer',
+        nameAr: 'بعد الصلاة',
         icon: 'PersonStanding',
         color: 'from-sky-400 to-blue-600',
         items: [
@@ -91,6 +96,7 @@ export const azkarData: AzkarCategory = {
       {
         id: 'before-sleep-azkar',
         name: 'Before Sleep',
+        nameAr: 'قبل النوم',
         icon: 'Bed',
         color: 'from-indigo-500 to-purple-600',
         items: [
@@ -109,12 +115,14 @@ export const azkarData: AzkarCategory = {
       {
         id: 'daily-duas',
         name: 'Daily Duas',
+        nameAr: 'أدعية يومية',
         icon: 'Calendar',
         color: 'from-green-400 to-emerald-600',
         subCategories: [
           {
             id: 'wakeup-azkar',
             name: 'When waking up',
+            nameAr: 'عند الاستيقاظ',
             icon: 'Sunrise',
             color: 'from-yellow-400 to-orange-500',
             items: [{
@@ -126,6 +134,7 @@ export const azkarData: AzkarCategory = {
           {
             id: 'mosque-azkar',
             name: 'For the Mosque',
+            nameAr: 'للمسجد',
             icon: 'Building2',
             color: 'from-teal-400 to-cyan-600',
             items: [{
@@ -143,6 +152,7 @@ export const azkarData: AzkarCategory = {
       {
         id: 'quranic-duas',
         name: 'Quranic Duas',
+        nameAr: 'أدعية قرآنية',
         icon: 'BookOpen',
         color: 'from-purple-500 to-violet-600',
         items: [

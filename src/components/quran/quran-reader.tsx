@@ -23,7 +23,8 @@ interface QuranReaderProps {
 
 export function QuranReader({ surah, onBack }: QuranReaderProps) {
   const { settings, setQuranViewMode } = useSettings();
-  const { quranViewMode } = settings;
+  const { quranViewMode, language } = settings;
+  const isArabic = language === 'ar';
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [isTafseerOpen, setTafseerOpen] = useState(false);
 
@@ -41,19 +42,19 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
             <ArrowLeft />
           </Button>
           <div className="text-center">
-            <h1 className="text-xl font-bold font-headline">{surah.englishName}</h1>
-            <p className="text-muted-foreground font-quran text-2xl">{surah.name}</p>
+            <h1 className="text-xl font-bold font-headline">{isArabic ? surah.name : surah.englishName}</h1>
+            <p className="text-muted-foreground font-quran text-2xl">{isArabic ? surah.englishName : surah.name}</p>
           </div>
           <div className="w-10"></div>
         </div>
         <div className="flex items-center justify-between mt-4 gap-4">
-            <Select defaultValue="uthmani">
+            <Select defaultValue="uthmani" dir={isArabic ? 'rtl' : 'ltr'}>
                 <SelectTrigger className="w-auto flex-1 bg-foreground/5 backdrop-blur-lg border-foreground/10 rounded-xl">
-                    <SelectValue placeholder="Edition" />
+                    <SelectValue placeholder={isArabic ? "الرسم" : "Edition"} />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="uthmani">Uthmani</SelectItem>
-                    <SelectItem value="tajweed" disabled>Color-coded Tajweed</SelectItem>
+                    <SelectItem value="uthmani">{isArabic ? "عثماني" : "Uthmani"}</SelectItem>
+                    <SelectItem value="tajweed" disabled>{isArabic ? "تجويد ملون" : "Color-coded Tajweed"}</SelectItem>
                 </SelectContent>
             </Select>
 
@@ -65,6 +66,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
                     id="view-mode-switch"
                     checked={quranViewMode === 'page'}
                     onCheckedChange={(checked) => setQuranViewMode(checked ? 'page' : 'list')}
+                    dir="ltr"
                 />
                  <Label htmlFor="view-mode-switch">
                     <Book className={quranViewMode === 'page' ? 'text-primary' : ''}/>
@@ -88,7 +90,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
                     ({verse.number.inSurah})
                   </span>
                 </p>
-                <p className="text-muted-foreground leading-relaxed">{verse.translation}</p>
+                <p dir={isArabic ? 'rtl' : 'ltr'} className="text-muted-foreground leading-relaxed">{verse.translation}</p>
               </div>
             ))}
           </div>
@@ -110,7 +112,7 @@ export function QuranReader({ surah, onBack }: QuranReaderProps) {
       {selectedVerse && (
         <TafseerModal 
           verse={selectedVerse} 
-          surahName={surah.englishName}
+          surahName={isArabic ? surah.name : surah.englishName}
           surahNumber={surah.number}
           isOpen={isTafseerOpen} 
           onClose={() => setTafseerOpen(false)} 

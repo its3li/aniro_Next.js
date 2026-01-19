@@ -13,6 +13,7 @@ import type { Verse } from '@/lib/quran';
 import { Copy, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
+import { useSettings } from '../providers/settings-provider';
 
 interface TafseerModalProps {
   verse: Verse;
@@ -24,6 +25,8 @@ interface TafseerModalProps {
 
 export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }: TafseerModalProps) {
   const { toast } = useToast();
+  const { settings } = useSettings();
+  const isArabic = settings.language === 'ar';
   const [tafseerContent, setTafseerContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -34,8 +37,8 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
         setTafseerContent(null);
         try {
           const verseKey = `${surahNumber}:${verse.number.inSurah}`;
-          // Using Tafsir Ibn Kathir (id: 169) from quran.com API
-          const response = await fetch(`https://api.quran.com/api/v4/quran/tafsirs/169?verse_key=${verseKey}`);
+          const tafsirId = isArabic ? 171 : 169; // 171 for Ibn Kathir (AR), 169 for Ibn Kathir (EN)
+          const response = await fetch(`https://api.quran.com/api/v4/quran/tafsirs/${tafsirId}?verse_key=${verseKey}`);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -47,17 +50,16 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
             throw new Error("Tafseer not found for this verse.");
           }
 
-          // The text from the API contains HTML, so we strip it for plain text display.
           tafseerText = tafseerText.replace(/<[^>]*>/g, '');
 
           setTafseerContent(tafseerText);
         } catch (error) {
           console.error("Failed to fetch Tafseer:", error);
-          setTafseerContent("Sorry, we couldn't fetch the explanation for this verse at the moment.");
+          setTafseerContent(isArabic ? "عذراً، لم نتمكن من جلب تفسير هذه الآية في الوقت الحالي." : "Sorry, we couldn't fetch the explanation for this verse at the moment.");
           toast({
             variant: "destructive",
-            title: "Tafseer Fetch Failed",
-            description: "Please try again later.",
+            title: isArabic ? "فشل جلب التفسير" : "Tafseer Fetch Failed",
+            description: isArabic ? "يرجى المحاولة مرة أخرى لاحقًا." : "Please try again later.",
           });
         } finally {
           setIsLoading(false);
@@ -66,20 +68,20 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
 
       fetchTafseer();
     }
-  }, [isOpen, verse, surahName, surahNumber, toast]);
+  }, [isOpen, verse, surahName, surahNumber, toast, isArabic]);
 
   const handleCopy = () => {
-    const textToCopy = `${verse.text}\n\n${verse.translation}\n\nTafseer:\n${tafseerContent || ''}\n- Quran, ${surahName} ${verse.number.inSurah}`;
+    const textToCopy = `${verse.text}\n\n${verse.translation}\n\n${isArabic ? 'التفسير' : 'Tafseer'}:\n${tafseerContent || ''}\n- Quran, ${surahName} ${verse.number.inSurah}`;
     navigator.clipboard.writeText(textToCopy);
-    toast({ title: 'Copied to clipboard!' });
+    toast({ title: isArabic ? 'تم النسخ إلى الحافظة!' : 'Copied to clipboard!' });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-background/80 backdrop-blur-2xl border-foreground/20 rounded-3xl">
+      <DialogContent className="bg-background/80 backdrop-blur-2xl border-foreground/20 rounded-3xl" dir={isArabic ? 'rtl' : 'ltr'}>
         <DialogHeader>
           <DialogTitle>
-            Tafseer for {surahName}, Verse {verse.number.inSurah}
+            {isArabic ? `تفسير الآية ${verse.number.inSurah} من سورة ${surahName}` : `Tafseer for ${surahName}, Verse ${verse.number.inSurah}`}
           </DialogTitle>
           <DialogDescription className='font-quran text-lg text-right text-foreground pt-4'>
             {verse.text}
@@ -90,7 +92,7 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
             {isLoading && (
               <div className="flex items-center justify-center gap-2 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Fetching explanation...</span>
+                <span>{isArabic ? 'جاري جلب التفسير...' : 'Fetching explanation...'}</span>
               </div>
             )}
             {tafseerContent && (
@@ -100,16 +102,16 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
                           {tafseerContent}
                       </p>
                     </ScrollArea>
-                    <p className='text-sm text-muted-foreground'>Source: Tafsir Ibn Kathir (quran.com API)</p>
+                    <p className='text-sm text-muted-foreground'>{isArabic ? 'المصدر: تفسير ابن كثير (quran.com API)' : 'Source: Tafsir Ibn Kathir (quran.com API)'}</p>
                 </>
             )}
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:justify-end">
           <Button onClick={handleCopy} variant="outline" disabled={isLoading || !tafseerContent}>
             <Copy className="mr-2 h-4 w-4" />
-            Copy
+            {isArabic ? 'نسخ' : 'Copy'}
           </Button>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose}>{isArabic ? 'إغلاق' : 'Close'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,14 +1,23 @@
+export const prayerNameMapping = {
+    Fajr: { en: 'Fajr', ar: 'الفجر' },
+    Dhuhr: { en: 'Dhuhr', ar: 'الظهر' },
+    Asr: { en: 'Asr', ar: 'العصر' },
+    Maghrib: { en: 'Maghrib', ar: 'المغرب' },
+    Isha: { en: 'Isha', ar: 'العشاء' },
+};
+export type PrayerName = keyof typeof prayerNameMapping;
+
 export interface PrayerTime {
-    name: 'Fajr' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha';
+    name: PrayerName;
     time: string;
 }
 
 export interface Prayer {
-    name: 'Fajr' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha';
+    name: PrayerName;
     date: Date;
 }
   
-const mockPrayerTimes: PrayerTime[] = [
+const mockPrayerTimes: { name: PrayerName; time: string }[] = [
     { name: 'Fajr', time: '04:30' },
     { name: 'Dhuhr', time: '12:30' },
     { name: 'Asr', time: '16:00' },

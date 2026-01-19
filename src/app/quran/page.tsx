@@ -25,9 +25,8 @@ export default function QuranPage() {
     const fetchSurah = async () => {
       setIsLoading(true);
       try {
-        // Using quran.com API v4
-        // Translation ID 131 is for "Dr. Mustafa Khattab, the Clear Quran"
-        const response = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${selectedSurahInfo.number}?language=en&words=false&translations=131&fields=text_uthmani`);
+        const translationId = isArabic ? 20 : 131; // 20 for Tafsir Jalalayn (AR), 131 for Clear Quran (EN)
+        const response = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${selectedSurahInfo.number}?language=en&words=false&translations=${translationId}&fields=text_uthmani&per_page=all`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -38,7 +37,7 @@ export default function QuranPage() {
         const combinedVerses: Surah['verses'] = data.verses.map((verse: any) => ({
           number: { inQuran: verse.id, inSurah: verse.verse_number },
           text: verse.text_uthmani,
-          translation: verse.translations?.[0]?.text.replace(/<[^>]*>/g, '') || 'Translation not available.',
+          translation: verse.translations?.[0]?.text.replace(/<[^>]*>/g, '') || (isArabic ? 'التفسير غير متوفر' : 'Translation not available.'),
         }));
 
         setFullSurah({
@@ -50,8 +49,8 @@ export default function QuranPage() {
         console.error("Failed to fetch Surah data:", error);
         toast({
             variant: "destructive",
-            title: "Failed to load Surah",
-            description: "Please check your internet connection and try again.",
+            title: isArabic ? "فشل تحميل السورة" : "Failed to load Surah",
+            description: isArabic ? "يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى." : "Please check your internet connection and try again.",
         });
         setSelectedSurahInfo(null);
       } finally {
@@ -60,7 +59,7 @@ export default function QuranPage() {
     };
 
     fetchSurah();
-  }, [selectedSurahInfo, toast]);
+  }, [selectedSurahInfo, toast, isArabic]);
 
   const handleBack = () => {
     setSelectedSurahInfo(null);
