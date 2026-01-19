@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -86,17 +87,11 @@
 }
 
 /* Tajweed Styles */
-.ham_wasl, .slnt { color: #AAAAAA; }
-.madda_normal { color: #537FFF; }
-.madda_permissible { color: #4050FF; }
-.madda_necessary { color: #000EBC; }
-.qlq { color: #DD0008; }
-.madda_obligatory { color: #2144C1; }
-.ikhf_shfw { color: #D500B7; }
-.ikhf { color: #9400A8; }
-.idghm_shfw { color: #58B800; }
-.iqlb { color: #26BFFD; }
-.idgh_ghn { color: #169777; }
-.idgh_w_ghn { color: #169200; }
-.idgh_mus, .idgh_mut { color: #A1A1A1; }
-.ghn { color: #FF7E1E; }
+.ham_wasl, .slnt, .idghm_shfw, .idgh_ghn, .idgh_w_ghn, .idgh_mus, .idgh_mut { color: #AAAAAA; }
+.madda_normal { color: #ffc300; }
+.madda_permissible { color: #ff9900; }
+.madda_necessary { color: #d9007e; }
+.qlq { color: #00aeff; }
+.madda_obligatory { color: #ff00b7; }
+.ikhf_shfw, .ikhf, .ghn { color: #00b800; }
+.iqlb { color: #00aeff; }
