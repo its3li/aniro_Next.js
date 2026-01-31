@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">أنيروا</string>
+    <string name="title_activity_main">أنيروا</string>
+    <string name="widget_description">عرض وقت الصلاة القادمة</string>
+    <string name="widget_name">مواقيت الصلاة</string>
+    <string name="daily_widget_description">عرض جميع أوقات الصلاة لليوم</string>
+</resources>

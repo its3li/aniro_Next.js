@@ -1,17 +1,12 @@
-
 'use client';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { Verse } from '@/lib/quran';
-import { Copy, Loader2 } from 'lucide-react';
+import { Copy, Loader2, BookOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
 import { useSettings } from '../providers/settings-provider';
@@ -46,7 +41,7 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
             throw new Error(`HTTP error! status: ${response.status}`);
           }
           const data = await response.json();
-          
+
           if (data.code !== 200 || !data.data) {
             throw new Error("Tafseer not found for this verse.");
           }
@@ -86,41 +81,92 @@ export function TafseerModal({ verse, surahName, surahNumber, isOpen, onClose }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-background/80 backdrop-blur-2xl border-foreground/20 rounded-3xl" dir={isArabic ? 'rtl' : 'ltr'}>
-        <DialogHeader>
-          <DialogTitle>
-            {isArabic ? `تفسير الآية ${verse.number.inSurah} من سورة ${surahName}` : `Tafseer for ${surahName}, Verse ${verse.number.inSurah}`}
-          </DialogTitle>
-          <DialogDescription className='font-quran text-lg text-right text-foreground pt-4'>
-            {verse.text}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4 min-h-[150px]">
-            <p className="text-muted-foreground italic">"{verse.translation}"</p>
-            {isLoading && (
-              <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>{isArabic ? 'جاري جلب التفسير...' : 'Fetching explanation...'}</span>
-              </div>
-            )}
-            {tafseerContent && (
-                <>
-                    <ScrollArea className="h-48 pr-4">
-                      <p className="text-sm">
-                          {tafseerContent}
-                      </p>
-                    </ScrollArea>
-                    <p className='text-sm text-muted-foreground'>{isArabic ? 'المصدر:' : 'Source:'} {sourceName} (AlQuran.cloud API)</p>
-                </>
-            )}
+      <DialogContent
+        className="max-w-[90vw] sm:max-w-lg mx-auto p-0 bg-background border-foreground/10 rounded-3xl overflow-hidden shadow-2xl [&>button]:hidden"
+        dir={isArabic ? 'rtl' : 'ltr'}
+      >
+        {/* Header with centered icon */}
+        <div className="bg-primary/10 p-6 pb-4">
+          <div className="flex flex-col items-center gap-3 mb-4">
+            <div className="p-3 rounded-2xl bg-primary/20">
+              <BookOpen className="h-6 w-6 text-primary" />
+            </div>
+            <div className="text-center">
+              <h2 className="text-lg font-bold">
+                {isArabic ? 'التفسير' : 'Tafseer'}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {isArabic
+                  ? `${surahName} - الآية ${verse.number.inSurah}`
+                  : `${surahName} - Verse ${verse.number.inSurah}`}
+              </p>
+            </div>
+          </div>
+
+          {/* Verse text */}
+          <div className="p-4 rounded-2xl bg-background/50 backdrop-blur-sm">
+            <p className="font-quran text-xl text-center leading-loose">
+              {stripTajweed(verse.text)}
+            </p>
+          </div>
         </div>
-        <DialogFooter className="gap-2 sm:justify-end">
-          <Button onClick={handleCopy} variant="outline" disabled={isLoading || !tafseerContent}>
-            <Copy className="mr-2 h-4 w-4" />
+
+        {/* Content */}
+        <div className="p-6 pt-4 space-y-4">
+          {/* Translation */}
+          <div className="p-3 rounded-xl bg-foreground/5 border border-foreground/5">
+            <p className="text-sm text-muted-foreground italic text-center">
+              "{verse.translation}"
+            </p>
+          </div>
+
+          {/* Loading state */}
+          {isLoading && (
+            <div className="flex items-center justify-center gap-3 py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="text-muted-foreground">
+                {isArabic ? 'جاري جلب التفسير...' : 'Fetching explanation...'}
+              </span>
+            </div>
+          )}
+
+          {/* Tafseer content */}
+          {tafseerContent && (
+            <div className="space-y-3">
+              <h3 className="font-semibold flex items-center justify-center gap-2">
+                <span className="w-1 h-4 bg-primary rounded-full"></span>
+                {isArabic ? 'التفسير' : 'Explanation'}
+              </h3>
+              <ScrollArea className="h-48">
+                <p className="text-sm leading-relaxed px-2">
+                  {tafseerContent}
+                </p>
+              </ScrollArea>
+              <p className="text-xs text-muted-foreground text-center pt-2 border-t border-foreground/5">
+                {isArabic ? 'المصدر:' : 'Source:'} {sourceName}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="p-4 pt-0 flex gap-3">
+          <Button
+            onClick={onClose}
+            className="flex-1 rounded-xl h-12"
+          >
+            {isArabic ? 'إغلاق' : 'Close'}
+          </Button>
+          <Button
+            onClick={handleCopy}
+            variant="outline"
+            disabled={isLoading}
+            className="flex-1 rounded-xl h-12 gap-2"
+          >
+            <Copy className="h-4 w-4" />
             {isArabic ? 'نسخ' : 'Copy'}
           </Button>
-          <Button onClick={onClose}>{isArabic ? 'إغلاق' : 'Close'}</Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

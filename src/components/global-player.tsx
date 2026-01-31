@@ -14,9 +14,14 @@ export function GlobalPlayer() {
         setQuranReciter(identifier);
         localStorage.setItem('hasSetReciter', 'true');
         setReciterModalOpen(false);
+
+        // Delay execution to allow state to update first
         if (pendingActionRef.current) {
-            pendingActionRef.current();
+            const action = pendingActionRef.current;
             pendingActionRef.current = null;
+            setTimeout(() => {
+                action();
+            }, 100);
         }
     }
 
@@ -25,11 +30,11 @@ export function GlobalPlayer() {
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-50">
                 {playerState.showPlayer ? <QuranAudioPlayer /> : <BottomNav />}
             </div>
-            <ReciterSelectModal 
+            <ReciterSelectModal
                 isOpen={isReciterModalOpen}
                 onClose={() => {
-                  setReciterModalOpen(false);
-                  pendingActionRef.current = null;
+                    setReciterModalOpen(false);
+                    pendingActionRef.current = null;
                 }}
                 onSelect={handleReciterSelect}
             />

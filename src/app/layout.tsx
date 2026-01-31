@@ -8,11 +8,16 @@ import { AuroraBackground } from '@/components/aurora-background';
 import { Toaster } from "@/components/ui/toaster";
 import { AudioPlayerProvider } from '@/components/providers/audio-player-provider';
 import { GlobalPlayer } from '@/components/global-player';
+import { LoadingProvider } from '@/components/providers/loading-provider';
+import { AppContent } from '@/components/providers/app-content';
+import { SilentDownloadProvider } from '@/components/providers/silent-download-provider';
 
 export const metadata: Metadata = {
   title: 'Aniro',
   description: 'An elegant Islamic lifestyle application.',
 };
+
+import { AzanPlayer } from '@/components/providers/azan-player';
 
 export default function RootLayout({
   children,
@@ -37,13 +42,20 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SettingsProvider>
-            <AudioPlayerProvider>
-              <AuroraBackground>
-                <main className="pb-28">{children}</main>
-              </AuroraBackground>
-              <GlobalPlayer />
-              <Toaster />
-            </AudioPlayerProvider>
+            <LoadingProvider>
+              <AudioPlayerProvider>
+                <SilentDownloadProvider>
+                  <AppContent>
+                    <AuroraBackground>
+                      <main className="pb-28">{children}</main>
+                    </AuroraBackground>
+                    <GlobalPlayer />
+                    <AzanPlayer />
+                    <Toaster />
+                  </AppContent>
+                </SilentDownloadProvider>
+              </AudioPlayerProvider>
+            </LoadingProvider>
           </SettingsProvider>
         </ThemeProvider>
       </body>
