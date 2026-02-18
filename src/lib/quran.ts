@@ -32,7 +32,7 @@ export interface Surah extends SurahInfo {
 }
 
 // ============================================
-// OFFLINE-FIRST DATA FETCHING
+// OFFLINE-FIRST: bundled JSON → IDB cache → network fallback
 // ============================================
 
 import { get, set } from 'idb-keyval';
@@ -41,16 +41,95 @@ const SURAH_DATA_PREFIX = 'surah_';
 const SURAH_LIST_KEY = 'surah_list';
 const SURAH_API_BASE = 'https://api.alquran.cloud/v1/surah';
 
+// ============================================
+// In-memory LRU cache
+// ============================================
+
+const MEM_CACHE_MAX = 20;
+const memCache = new Map<string, Surah | SurahInfo[]>();
+
+function memGet<T>(key: string): T | undefined {
+  const v = memCache.get(key);
+  if (v) {
+    memCache.delete(key);
+    memCache.set(key, v as any);
+  }
+  return v as T | undefined;
+}
+
+function memSet(key: string, value: Surah | SurahInfo[]) {
+  if (memCache.size >= MEM_CACHE_MAX) {
+    const oldest = memCache.keys().next().value;
+    if (oldest) memCache.delete(oldest);
+  }
+  memCache.set(key, value);
+}
+
+// ============================================
+// Request deduplication
+// ============================================
+
+const inflightRequests = new Map<string, Promise<any>>();
+
+// ============================================
+// Retry helper with timeout
+// ============================================
+
+async function fetchWithRetry(
+  url: string,
+  retries = 2,
+  delay = 500,
+  timeoutMs = 10000
+): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response;
+    } catch (error) {
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, delay * (attempt + 1)));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Unreachable');
+}
+
+// ============================================
+// Load from bundled static JSON (in public/data/quran/)
+// ============================================
+
+async function loadBundledSurah(surahId: number, edition: string): Promise<any | null> {
+  try {
+    const res = await fetch(`/data/quran/surah/${edition}/${surahId}.json`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function loadBundledSurahList(): Promise<SurahInfo[] | null> {
+  try {
+    const res = await fetch('/data/quran/surah-list.json');
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// ============================================
+// Public API
+// ============================================
+
 /**
- * Get a Surah with Offline-First strategy.
- * 
- * 1. Check IndexedDB first (instant if cached)
- * 2. If not found, fetch from API
- * 3. Cache the result for next time
- * 
- * @param surahId - The Surah number (1-114)
- * @param edition - The edition to fetch (uthmani, tajweed, etc.)
- * @returns The Surah data or null if unavailable
+ * Get a Surah — Offline first (bundled JSON → IDB → network).
  */
 export async function getSurah(
   surahId: number,
@@ -58,28 +137,63 @@ export async function getSurah(
 ): Promise<Surah | null> {
   const cacheKey = `${SURAH_DATA_PREFIX}${surahId}_${edition}`;
 
+  // Tier 1: In-memory
+  const inMem = memGet<Surah>(cacheKey);
+  if (inMem) return inMem;
+
+  // Deduplicate
+  const existing = inflightRequests.get(cacheKey);
+  if (existing) return existing;
+
+  const fetchPromise = fetchSurahInternal(surahId, edition, cacheKey);
+  inflightRequests.set(cacheKey, fetchPromise);
+
   try {
-    // Step 1: Check IndexedDB cache first (instant)
+    return await fetchPromise;
+  } finally {
+    inflightRequests.delete(cacheKey);
+  }
+}
+
+async function fetchSurahInternal(
+  surahId: number,
+  edition: string,
+  cacheKey: string
+): Promise<Surah | null> {
+  try {
+    // Tier 2: IndexedDB
     const cachedData = await get(cacheKey);
     if (cachedData) {
-      console.log(`[Quran] Cache HIT for Surah ${surahId} (${edition})`);
+      memSet(cacheKey, cachedData as Surah);
       return cachedData as Surah;
     }
 
-    console.log(`[Quran] Cache MISS for Surah ${surahId} (${edition}), fetching from API...`);
-
-    // Step 2: Fetch from API
-    const response = await fetch(`${SURAH_API_BASE}/${surahId}/${edition}`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    // Tier 3: Bundled JSON (local file in APK)
+    const bundled = await loadBundledSurah(surahId, edition);
+    if (bundled) {
+      const surah: Surah = {
+        number: bundled.number,
+        name: bundled.name,
+        englishName: bundled.englishName,
+        englishNameTranslation: bundled.englishNameTranslation,
+        numberOfAyahs: bundled.numberOfAyahs,
+        revelationType: bundled.revelationType,
+        verses: bundled.ayahs.map((a: any) => ({
+          number: { inQuran: a.number, inSurah: a.numberInSurah },
+          text: a.text,
+          translation: '',
+        })),
+      };
+      memSet(cacheKey, surah);
+      set(cacheKey, surah).catch(() => { });
+      return surah;
     }
 
+    // Tier 4: Network API fallback
+    const response = await fetchWithRetry(`${SURAH_API_BASE}/${surahId}/${edition}`);
     const json = await response.json();
-    if (json.code !== 200 || !json.data) {
-      throw new Error('Invalid API response');
-    }
+    if (json.code !== 200 || !json.data) throw new Error('Invalid API response');
 
-    // Transform API response to our Surah interface
     const apiData = json.data;
     const surah: Surah = {
       number: apiData.number,
@@ -89,68 +203,93 @@ export async function getSurah(
       numberOfAyahs: apiData.numberOfAyahs,
       revelationType: apiData.revelationType,
       verses: apiData.ayahs.map((ayah: any) => ({
-        number: {
-          inQuran: ayah.number,
-          inSurah: ayah.numberInSurah,
-        },
+        number: { inQuran: ayah.number, inSurah: ayah.numberInSurah },
         text: ayah.text,
-        translation: '', // Will be fetched separately if needed
+        translation: '',
       })),
     };
 
-    // Step 3: Cache the result for next time
-    await set(cacheKey, surah);
-    console.log(`[Quran] Cached Surah ${surahId} (${edition}) to IndexedDB`);
-
+    memSet(cacheKey, surah);
+    set(cacheKey, surah).catch(() => { });
     return surah;
   } catch (error) {
     console.error(`[Quran] Failed to get Surah ${surahId}:`, error);
-
-    // Try to return basic cached version without edition suffix
-    const basicCacheKey = `${SURAH_DATA_PREFIX}${surahId}`;
-    const basicCached = await get(basicCacheKey);
-    if (basicCached) {
-      console.log(`[Quran] Returning basic cached version of Surah ${surahId}`);
-      return basicCached as Surah;
-    }
-
     return null;
   }
 }
 
 /**
- * Get Surah with translation - fetches both Arabic text and translation.
- * 
- * @param surahId - The Surah number (1-114)
- * @param arabicEdition - Arabic text edition
- * @param translationEdition - Translation edition
+ * Get Surah with translation — loads Arabic + translation from bundled JSON.
  */
 export async function getSurahWithTranslation(
   surahId: number,
   arabicEdition: string = 'quran-uthmani',
-  translationEdition: string = 'en.asad'
+  translationEdition: string = 'en.sahih'
 ): Promise<Surah | null> {
   const cacheKey = `${SURAH_DATA_PREFIX}${surahId}_${arabicEdition}_${translationEdition}`;
 
+  // Tier 1: In-memory
+  const inMem = memGet<Surah>(cacheKey);
+  if (inMem) return inMem;
+
+  // Deduplicate
+  const existing = inflightRequests.get(cacheKey);
+  if (existing) return existing;
+
+  const fetchPromise = fetchSurahWithTranslationInternal(surahId, arabicEdition, translationEdition, cacheKey);
+  inflightRequests.set(cacheKey, fetchPromise);
+
   try {
-    // Check cache first
+    return await fetchPromise;
+  } finally {
+    inflightRequests.delete(cacheKey);
+  }
+}
+
+async function fetchSurahWithTranslationInternal(
+  surahId: number,
+  arabicEdition: string,
+  translationEdition: string,
+  cacheKey: string
+): Promise<Surah | null> {
+  try {
+    // Tier 2: IndexedDB
     const cachedData = await get(cacheKey);
     if (cachedData) {
-      console.log(`[Quran] Cache HIT for Surah ${surahId} with translation`);
+      memSet(cacheKey, cachedData as Surah);
       return cachedData as Surah;
     }
 
-    console.log(`[Quran] Fetching Surah ${surahId} with translation...`);
-
-    // Fetch both editions in parallel
-    const [arabicResponse, translationResponse] = await Promise.all([
-      fetch(`${SURAH_API_BASE}/${surahId}/${arabicEdition}`),
-      fetch(`${SURAH_API_BASE}/${surahId}/${translationEdition}`),
+    // Tier 3: Bundled JSON — load Arabic + translation from local files
+    const [bundledArabic, bundledTranslation] = await Promise.all([
+      loadBundledSurah(surahId, arabicEdition),
+      loadBundledSurah(surahId, translationEdition),
     ]);
 
-    if (!arabicResponse.ok || !translationResponse.ok) {
-      throw new Error('Failed to fetch one or both editions');
+    if (bundledArabic && bundledTranslation) {
+      const surah: Surah = {
+        number: bundledArabic.number,
+        name: bundledArabic.name,
+        englishName: bundledArabic.englishName,
+        englishNameTranslation: bundledArabic.englishNameTranslation,
+        numberOfAyahs: bundledArabic.numberOfAyahs,
+        revelationType: bundledArabic.revelationType,
+        verses: bundledArabic.ayahs.map((a: any, i: number) => ({
+          number: { inQuran: a.number, inSurah: a.numberInSurah },
+          text: a.text,
+          translation: bundledTranslation.ayahs[i]?.text || '',
+        })),
+      };
+      memSet(cacheKey, surah);
+      set(cacheKey, surah).catch(() => { });
+      return surah;
     }
+
+    // Tier 4: Network API fallback (parallel fetch)
+    const [arabicResponse, translationResponse] = await Promise.all([
+      fetchWithRetry(`${SURAH_API_BASE}/${surahId}/${arabicEdition}`),
+      fetchWithRetry(`${SURAH_API_BASE}/${surahId}/${translationEdition}`),
+    ]);
 
     const [arabicJson, translationJson] = await Promise.all([
       arabicResponse.json(),
@@ -164,7 +303,6 @@ export async function getSurahWithTranslation(
     const arabicData = arabicJson.data;
     const translationData = translationJson.data;
 
-    // Merge Arabic and translation
     const surah: Surah = {
       number: arabicData.number,
       name: arabicData.name,
@@ -173,19 +311,14 @@ export async function getSurahWithTranslation(
       numberOfAyahs: arabicData.numberOfAyahs,
       revelationType: arabicData.revelationType,
       verses: arabicData.ayahs.map((ayah: any, index: number) => ({
-        number: {
-          inQuran: ayah.number,
-          inSurah: ayah.numberInSurah,
-        },
+        number: { inQuran: ayah.number, inSurah: ayah.numberInSurah },
         text: ayah.text,
         translation: translationData.ayahs[index]?.text || '',
       })),
     };
 
-    // Cache the merged result
-    await set(cacheKey, surah);
-    console.log(`[Quran] Cached Surah ${surahId} with translation`);
-
+    memSet(cacheKey, surah);
+    set(cacheKey, surah).catch(() => { });
     return surah;
   } catch (error) {
     console.error(`[Quran] Failed to get Surah ${surahId} with translation:`, error);
@@ -194,37 +327,37 @@ export async function getSurahWithTranslation(
 }
 
 /**
- * Get the list of all Surahs with Offline-First strategy.
- * 
- * @returns Array of SurahInfo or empty array if unavailable
+ * Get the list of all Surahs — from bundled JSON first, then IDB, then network.
  */
 export async function getSurahList(): Promise<SurahInfo[]> {
+  // Tier 1: In-memory
+  const inMem = memGet<SurahInfo[]>(SURAH_LIST_KEY);
+  if (inMem) return inMem;
+
   try {
-    // Check cache first
+    // Tier 2: IndexedDB
     const cachedList = await get(SURAH_LIST_KEY);
     if (cachedList) {
-      console.log('[Quran] Surah list loaded from cache');
+      memSet(SURAH_LIST_KEY, cachedList as SurahInfo[]);
       return cachedList as SurahInfo[];
     }
 
-    console.log('[Quran] Fetching Surah list from API...');
-
-    const response = await fetch(`${SURAH_API_BASE}`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    // Tier 3: Bundled JSON
+    const bundled = await loadBundledSurahList();
+    if (bundled) {
+      memSet(SURAH_LIST_KEY, bundled);
+      set(SURAH_LIST_KEY, bundled).catch(() => { });
+      return bundled;
     }
 
+    // Tier 4: Network
+    const response = await fetchWithRetry(SURAH_API_BASE);
     const json = await response.json();
-    if (json.code !== 200 || !json.data) {
-      throw new Error('Invalid API response');
-    }
+    if (json.code !== 200 || !json.data) throw new Error('Invalid API response');
 
     const surahList: SurahInfo[] = json.data;
-
-    // Cache the list
-    await set(SURAH_LIST_KEY, surahList);
-    console.log('[Quran] Surah list cached to IndexedDB');
-
+    memSet(SURAH_LIST_KEY, surahList);
+    set(SURAH_LIST_KEY, surahList).catch(() => { });
     return surahList;
   } catch (error) {
     console.error('[Quran] Failed to get Surah list:', error);
@@ -234,25 +367,20 @@ export async function getSurahList(): Promise<SurahInfo[]> {
 
 /**
  * Check if a Surah is available offline.
- * 
- * @param surahId - The Surah number
- * @param edition - The edition to check
  */
 export async function isSurahCached(
   surahId: number,
   edition: string = 'quran-uthmani'
 ): Promise<boolean> {
   const cacheKey = `${SURAH_DATA_PREFIX}${surahId}_${edition}`;
+  if (memGet(cacheKey)) return true;
   const data = await get(cacheKey);
   return data !== undefined;
 }
 
 /**
  * Prefetch a Surah in the background (for preloading).
- * 
- * @param surahId - The Surah number to prefetch
  */
 export async function prefetchSurah(surahId: number): Promise<void> {
-  // Just call getSurah - it will cache if not already cached
   await getSurah(surahId);
 }

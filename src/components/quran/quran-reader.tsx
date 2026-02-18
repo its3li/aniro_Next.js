@@ -1,21 +1,15 @@
 
 'use client';
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { Surah, Verse } from '@/lib/quran';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Book, List, Play, Pause, Copy, PlayCircle, PauseCircle } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ArrowLeft, Play, Pause, PlayCircle, PauseCircle } from 'lucide-react';
 import { TafseerModal } from './tafseer-modal';
-import { useSettings, type QuranEdition } from '../providers/settings-provider';
+import { useSettings } from '../providers/settings-provider';
 import { parseTajweed, stripTajweed } from '@/lib/tajweed';
+import { TajweedLegend } from './tajweed-legend';
+import { MushafPageView } from './mushaf-page-view';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAudioPlayer } from '../providers/audio-player-provider';
@@ -37,7 +31,7 @@ interface QuranReaderProps {
 }
 
 export function QuranReader({ surah, onBack, initialVerseNumber }: QuranReaderProps) {
-  const { settings, setQuranViewMode, setQuranEdition } = useSettings();
+  const { settings } = useSettings();
   const { quranViewMode, language, quranEdition } = settings;
   const isArabic = language === 'ar';
   const { toast } = useToast();
@@ -56,23 +50,21 @@ export function QuranReader({ surah, onBack, initialVerseNumber }: QuranReaderPr
   // Scroll to active verse
   useEffect(() => {
     if (playerState.activeVerseKey && playerState.isPlaying) {
-      // A short delay to allow the UI to update before scrolling
       setTimeout(() => {
         verseRefs.current.get(playerState.activeVerseKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
     }
   }, [playerState.activeVerseKey, playerState.isPlaying]);
 
-  // Scroll to initial verse (from search)
+  // Scroll to initial verse (from search) — list mode only
   useEffect(() => {
+    if (quranViewMode === 'page') return; // Page mode handles this internally
     if (surah && typeof surah.number === 'number' && typeof initialVerseNumber === 'number') {
       const verseKey = `${surah.number}:${initialVerseNumber}`;
-      // Small delay to ensure rendering is complete
       setTimeout(() => {
         const element = verseRefs.current.get(verseKey);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Add a temporary highlight class
           element.classList.add('bg-primary/20');
           setTimeout(() => {
             element.classList.remove('bg-primary/20');
@@ -80,7 +72,7 @@ export function QuranReader({ surah, onBack, initialVerseNumber }: QuranReaderPr
         }
       }, 500);
     }
-  }, [surah, initialVerseNumber]);
+  }, [surah, initialVerseNumber, quranViewMode]);
 
 
   const handleVersePlayClick = (verse: Verse) => {
@@ -117,116 +109,68 @@ export function QuranReader({ surah, onBack, initialVerseNumber }: QuranReaderPr
 
   return (
     <div>
-      <header className="sticky top-0 z-20 bg-background border-b p-4">
-        <div className="flex items-center justify-between gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft />
-          </Button>
-          <div className="text-center flex-1">
-            <h1 className="text-xl font-bold font-headline">{isArabic ? surah.name : surah.englishName}</h1>
-            <p className="text-muted-foreground font-quran text-2xl">{isArabic ? surah.englishName : surah.name}</p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleToggleContinuousPlay}>
-            {isSurahPlaying ? <PauseCircle /> : <PlayCircle />}
-          </Button>
-        </div>
-        <div className="flex items-center justify-between mt-4 gap-4">
-          <Select value={quranEdition} onValueChange={(value) => setQuranEdition(value as QuranEdition)} dir={isArabic ? 'rtl' : 'ltr'}>
-            <SelectTrigger className="w-auto flex-1 bg-foreground/5 backdrop-blur-lg border-foreground/10 rounded-xl">
-              <SelectValue placeholder={isArabic ? "الرسم" : "Edition"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="uthmani">{isArabic ? "حفص عن عاصم" : "Hafs 'an 'Asim"}</SelectItem>
-              <SelectItem value="warsh">{isArabic ? "ورش عن نافع" : "Warsh an-Nafi'"}</SelectItem>
-              <SelectItem value="tajweed">{isArabic ? "تجويد ملون" : "Color-coded Tajweed"}</SelectItem>
-            </SelectContent>
-          </Select>
+      {quranViewMode === 'page' ? (
+        <MushafPageView surahNumber={surah.number} initialVerseNumber={initialVerseNumber} onBack={onBack} />
+      ) : (
+        <>
+          {/* Header — native sticky app bar */}
+          <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-2.5 safe-area-top">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="shrink-0 w-9 h-9" onClick={onBack}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base font-semibold truncate">{isArabic ? surah.name : surah.englishName}</h1>
+                <p className="text-xs text-muted-foreground truncate">{isArabic ? surah.englishName : surah.name}</p>
+              </div>
+              <Button variant="ghost" size="icon" className="shrink-0 w-9 h-9" onClick={handleToggleContinuousPlay}>
+                {isSurahPlaying ? <PauseCircle className="w-5 h-5" /> : <PlayCircle className="w-5 h-5" />}
+              </Button>
+            </div>
+          </header>
 
-          <div className='flex items-center gap-2 bg-foreground/5 backdrop-blur-lg border-foreground/10 rounded-xl p-2'>
-            <Label htmlFor="view-mode-switch">
-              <List className={quranViewMode === 'list' ? 'text-primary' : ''} />
-            </Label>
-            <Switch
-              id="view-mode-switch"
-              checked={quranViewMode === 'page'}
-              onCheckedChange={(checked) => setQuranViewMode(checked ? 'page' : 'list')}
-              dir="ltr"
-            />
-            <Label htmlFor="view-mode-switch">
-              <Book className={quranViewMode === 'page' ? 'text-primary' : ''} />
-            </Label>
-          </div>
-        </div>
-      </header>
-
-      <div className="p-4 md:p-6">
-        {quranViewMode === 'list' ? (
-          <div className="flex flex-col gap-4">
-            {surah.verses.map((verse) => {
-              const verseKey = `${surah.number}:${verse.number.inSurah}`;
-              const isPlaying = playerState.activeVerseKey === verseKey && playerState.isPlaying;
-              const isVerseActive = playerState.activeVerseKey === verseKey;
-              return (
-                <div
-                  key={verse.number.inQuran}
-                  ref={el => verseRefs.current.set(verseKey, el)}
-                  onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }}
-                  className={cn("bg-foreground/5 p-4 rounded-2xl flex items-start gap-4 transition-colors", isVerseActive && 'active-verse-highlight')}
-                >
-                  <Button variant="ghost" size="icon" className="mt-2" onClick={() => handleVersePlayClick(verse)}>
-                    {isPlaying ? <Pause /> : <Play />}
-                  </Button>
-                  <div className='flex-1'>
-                    <p className="text-right font-quran text-2xl leading-loose mb-4">
-                      {quranEdition === 'tajweed' ? (
-                        <span dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
-                      ) : (
-                        verse.text
-                      )}
-                      <span className="text-primary font-sans text-lg mx-2">
-                        ({verse.number.inSurah})
-                      </span>
-                    </p>
-                    <p dir={isArabic ? 'rtl' : 'ltr'} className="text-muted-foreground leading-relaxed">{verse.translation}</p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="bg-foreground/5 p-6 rounded-2xl">
-            <div className="font-quran text-3xl leading-loose text-right">
-              {surah.verses.map(verse => {
+          {/* Tajweed legend */}
+          {quranEdition === 'tajweed' && (
+            <div className="sticky top-[52px] z-10">
+              <TajweedLegend />
+            </div>
+          )}
+          <div className="px-4 py-3">
+            <div className="flex flex-col gap-2">
+              {surah.verses.map((verse) => {
                 const verseKey = `${surah.number}:${verse.number.inSurah}`;
                 const isPlaying = playerState.activeVerseKey === verseKey && playerState.isPlaying;
                 const isVerseActive = playerState.activeVerseKey === verseKey;
                 return (
-                  <span key={verse.number.inQuran} ref={el => verseRefs.current.set(verseKey, el)} onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }} className={cn("relative group transition-colors rounded-md", isVerseActive && 'bg-primary/10')}>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center gap-1 p-1 rounded-full bg-background/80 backdrop-blur-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                      dir="ltr"
-                    >
-                      <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => handleVersePlayClick(verse)}>
-                        {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => handleCopy(verse)}>
-                        <Copy className="h-5 w-5" />
-                      </Button>
+                  <div
+                    key={verse.number.inQuran}
+                    ref={el => verseRefs.current.set(verseKey, el)}
+                    onContextMenu={(e) => { e.preventDefault(); handleLongPress(verse); }}
+                    className={cn("bg-card border border-border p-3 rounded-xl flex items-start gap-3 transition-colors", isVerseActive && 'active-verse-highlight')}
+                  >
+                    <Button variant="ghost" size="icon" className="mt-1 shrink-0 h-8 w-8" onClick={() => handleVersePlayClick(verse)}>
+                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    </Button>
+                    <div className='flex-1'>
+                      <p className="text-right font-quran text-xl leading-loose mb-2">
+                        {quranEdition === 'tajweed' ? (
+                          <span dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
+                        ) : (
+                          verse.text
+                        )}
+                        <span className="text-primary font-sans text-sm mx-1.5">
+                          ({verse.number.inSurah})
+                        </span>
+                      </p>
+                      <p dir={isArabic ? 'rtl' : 'ltr'} className="text-muted-foreground text-sm leading-relaxed">{verse.translation}</p>
                     </div>
-                    {quranEdition === 'tajweed' ? (
-                      <span dangerouslySetInnerHTML={{ __html: parseTajweed(verse.text) }} />
-                    ) : (
-                      <span>{verse.text}</span>
-                    )}
-                    <span className="text-primary font-sans text-xl mx-2">
-                      ({verse.number.inSurah})
-                    </span>
-                  </span>
+                  </div>
                 )
               })}
             </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {selectedVerseForTafseer && (
         <TafseerModal

@@ -4,7 +4,6 @@ import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { cn } from '@/lib/utils';
 import { SettingsProvider } from '@/components/providers/settings-provider';
-import { AuroraBackground } from '@/components/aurora-background';
 import { Toaster } from "@/components/ui/toaster";
 import { AudioPlayerProvider } from '@/components/providers/audio-player-provider';
 import { GlobalPlayer } from '@/components/global-player';
@@ -27,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -34,7 +34,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={cn('font-body antialiased')}>
+      <body className={cn('font-body antialiased bg-background min-h-screen')}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -46,9 +46,9 @@ export default function RootLayout({
               <AudioPlayerProvider>
                 <SilentDownloadProvider>
                   <AppContent>
-                    <AuroraBackground>
-                      <main className="pb-28">{children}</main>
-                    </AuroraBackground>
+                    <main className="pb-[4.5rem] safe-area-top" style={{ paddingBottom: 'calc(4.5rem + var(--safe-area-bottom, 0px))' }}>
+                      {children}
+                    </main>
                     <GlobalPlayer />
                     <AzanPlayer />
                     <Toaster />

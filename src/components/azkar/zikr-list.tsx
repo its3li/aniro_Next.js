@@ -3,13 +3,14 @@ import { ZikrCard } from "./zikr-card";
 
 interface ZikrListProps {
   items: AzkarItem[];
+  categoryId: string;
 }
 
-export function ZikrList({ items }: ZikrListProps) {
+export function ZikrList({ items, categoryId }: ZikrListProps) {
   return (
     <div className="flex flex-col gap-4">
       {items.map((item, index) => (
-        <ZikrCard key={index} item={item} />
+        <ZikrCard key={index} item={item} categoryId={categoryId} index={index} />
       ))}
     </div>
   );

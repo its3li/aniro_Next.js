@@ -1,7 +1,6 @@
 'use client';
 
 import { useSettings } from '../providers/settings-provider';
-import { useLocation } from '@/hooks/use-location';
 
 export function WelcomeHeader() {
   const { settings } = useSettings();
@@ -15,17 +14,17 @@ export function WelcomeHeader() {
   }).format(new Date());
 
   return (
-    <div className="flex justify-between items-start">
+    <div className="flex justify-between items-center py-2">
       <div>
-        <h1 className="text-3xl font-bold text-primary font-headline tracking-tight">
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">
           {isArabic ? 'انيروا' : 'Aniro'}
         </h1>
-        <p className="text-muted-foreground text-lg">
+        <p className="text-muted-foreground text-sm">
           {isArabic ? 'السلام عليكم' : 'Salam, Believer'}
         </p>
       </div>
-      <div className="text-right pt-1">
-        <p className="text-lg font-bold font-headline text-primary/80 rotate-[-2deg] origin-bottom-right">
+      <div className="text-right">
+        <p className="text-sm font-medium text-primary">
           {hijriDate}
         </p>
       </div>

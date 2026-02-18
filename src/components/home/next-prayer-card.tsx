@@ -114,9 +114,6 @@ export function NextPrayerCard() {
       const now = Tone.now();
       const prayerDisplayName = isArabic ? prayerNameMapping[nextPrayer.name].ar : prayerNameMapping[nextPrayer.name].en;
 
-      // synth.triggerAttackRelease('C4', '8n', now);
-      // synth.triggerAttackRelease('E4', '8n', now + 0.5);
-      // synth.triggerAttackRelease('G4', '8n', now + 1);
       toast({
         title: isArabic ? `حان الآن وقت صلاة ${prayerDisplayName}` : `It's time for ${prayerDisplayName} prayer`,
         description: isArabic ? 'تقبل الله طاعتكم.' : 'May your prayers be accepted.',
@@ -142,39 +139,42 @@ export function NextPrayerCard() {
 
 
   if (!nextPrayer || prayerTimes.length === 0) {
-    return <GlassCard className="p-6 h-64 w-full bg-foreground/10 animate-pulse rounded-3xl" />;
+    return <div className="bg-card border border-border rounded-2xl p-4 h-40 w-full animate-pulse" />;
   }
 
   const Icon = prayerIcons[nextPrayer.name] || Sun;
   const nextPrayerName = isArabic ? prayerNameMapping[nextPrayer.name].ar : prayerNameMapping[nextPrayer.name].en;
 
-  return (
-    <GlassCard>
-      <GlassCardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <h2 className="text-xl font-bold font-headline">{nextPrayerName}</h2>
-            <p className="text-muted-foreground">{isArabic ? 'الصلاة التالية بعد' : 'Next prayer in'}</p>
+return (
+    <GlassCard className="py-2">
+      <GlassCardHeader className="pb-3">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Icon className="w-7 h-7 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">{nextPrayerName}</h2>
+              <p className="text-sm text-muted-foreground">{isArabic ? 'الصلاة التالية' : 'Next Prayer'}</p>
+            </div>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-bold text-primary font-mono">{timeToNextPrayer}</p>
-            {nextPrayerAzanTime && <p className="text-sm font-medium text-muted-foreground -mt-1">{isArabic ? 'في' : 'at'} {nextPrayerAzanTime}</p>}
+            <p className="text-3xl font-bold text-primary font-mono tabular-nums">{timeToNextPrayer}</p>
+            {nextPrayerAzanTime && <p className="text-sm text-muted-foreground">{nextPrayerAzanTime}</p>}
           </div>
         </div>
       </GlassCardHeader>
-      <GlassCardContent>
-        <div className="flex justify-between items-end pt-4">
+      <GlassCardContent className="pt-3">
+        <div className="flex justify-between items-center pt-4 border-t border-border">
           {prayerTimes.map((prayer, index) => {
             const IsNext = prayer.name === nextPrayer.name;
             const PrayerIcon = prayerIcons[prayer.name];
             const prayerDisplayName = isArabic ? prayerNameMapping[prayer.name].ar : prayerNameMapping[prayer.name].en;
             return (
-              <div key={index} className="flex flex-col items-center gap-2 text-center">
+              <div key={index} className="flex flex-col items-center gap-1.5 text-center">
+                <PrayerIcon className={cn("w-5 h-5", IsNext ? "text-primary" : "text-muted-foreground")} />
                 <p className={cn("text-xs font-medium", IsNext ? "text-primary" : "text-muted-foreground")}>{prayerDisplayName}</p>
-                <div className={cn("flex items-center justify-center w-12 h-12 rounded-full", IsNext ? "bg-primary/10" : "bg-foreground/5")}>
-                  <PrayerIcon className={cn("w-6 h-6", IsNext ? "text-primary" : "text-muted-foreground")} />
-                </div>
-                <p className={cn("text-xs font-semibold font-mono", IsNext ? "text-primary" : "text-muted-foreground")}>
+                <p className={cn("text-xs font-mono tabular-nums", IsNext ? "text-primary font-semibold" : "text-muted-foreground")}>
                   {settings.timeFormat === '12h'
                     ? prayer.date.toLocaleTimeString(isArabic ? 'ar-SA' : 'en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
                     : prayer.date.toLocaleTimeString(isArabic ? 'ar-SA' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}

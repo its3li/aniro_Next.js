@@ -11,8 +11,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Amiri', 'Inter', 'sans-serif'],
-        headline: ['Amiri', 'Inter', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
+        headline: ['Inter', 'sans-serif'],
         quran: ['Amiri', 'serif'],
         code: ['monospace'],
       },
@@ -77,40 +77,17 @@ export default {
       },
       keyframes: {
         'accordion-down': {
-          from: {
-            height: '0',
-          },
-          to: {
-            height: 'var(--radix-accordion-content-height)',
-          },
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
         },
         'accordion-up': {
-          from: {
-            height: 'var(--radix-accordion-content-height)',
-          },
-          to: {
-            height: '0',
-          },
-        },
-        'aurora-1': {
-          '0%, 100%': { transform: 'translateX(0) translateY(0) rotate(0deg) scale(1)' },
-          '50%': { transform: 'translateX(30px) translateY(40px) rotate(5deg) scale(1.1)' },
-        },
-        'aurora-2': {
-          '0%, 100%': { transform: 'translateX(0) translateY(0) rotate(0deg) scale(1)' },
-          '50%': { transform: 'translateX(-40px) translateY(20px) rotate(-8deg) scale(1.1)' },
-        },
-        'aurora-3': {
-          '0%, 100%': { transform: 'translateX(0) translateY(0) rotate(0deg) scale(1)' },
-          '50%': { transform: 'translateX(20px) translateY(-30px) rotate(6deg) scale(1.05)' },
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
         },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'aurora-1': 'aurora-1 20s ease-in-out infinite',
-        'aurora-2': 'aurora-2 24s ease-in-out infinite',
-        'aurora-3': 'aurora-3 28s ease-in-out infinite',
       },
     },
   },

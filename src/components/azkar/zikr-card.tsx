@@ -1,31 +1,40 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import type { AzkarItem } from "@/lib/azkar";
-import { GlassCard, GlassCardContent } from "../glass-card";
-import { Button } from '../ui/button';
-import { Check, Repeat } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettings } from '../providers/settings-provider';
 
 interface ZikrCardProps {
   item: AzkarItem;
+  categoryId: string;
+  index: number;
 }
 
-export function ZikrCard({ item }: ZikrCardProps) {
+export function ZikrCard({ item, categoryId, index }: ZikrCardProps) {
   const { settings } = useSettings();
+  const isArabic = settings.language === 'ar';
   const [count, setCount] = useState(item.repetitions || 0);
+  const persistenceKey = `azkar_progress_${categoryId}_${index}`;
+
+  // Load / Save logic
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(persistenceKey);
+      if (stored !== null) setCount(parseInt(stored));
+      else setCount(item.repetitions || 0);
+    } catch { setCount(item.repetitions || 0); }
+  }, [persistenceKey, item.repetitions]);
 
   useEffect(() => {
-    setCount(item.repetitions || 0);
-  }, [item]);
+    try { localStorage.setItem(persistenceKey, count.toString()); } catch { }
+  }, [count, persistenceKey]);
 
   const handleTap = () => {
     if (count > 0) {
       setCount(c => c - 1);
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
+      if (navigator.vibrate) navigator.vibrate(50);
     }
   };
 
@@ -34,53 +43,65 @@ export function ZikrCard({ item }: ZikrCardProps) {
     setCount(item.repetitions || 0);
   };
 
-  const hasCounter = item.repetitions && item.repetitions > 1;
-  const isCompleted = hasCounter && count === 0;
+  const total = item.repetitions || 1;
+  const progress = ((total - count) / total) * 100;
+  const isCompleted = count === 0;
 
   return (
-    <GlassCard
-      onClick={hasCounter ? handleTap : undefined}
+    <div
+      onClick={!isCompleted ? handleTap : undefined}
       className={cn(
-        'transition-all',
-        hasCounter && 'cursor-pointer active:scale-[0.98]',
-        isCompleted && 'bg-primary/10 border-primary/20'
+        "relative overflow-hidden rounded-2xl border bg-card transition-all duration-150 mb-3",
+        !isCompleted ? "active:scale-[0.99] cursor-pointer shadow-sm" : "border-primary/20",
+        isCompleted && "opacity-80 grayscale-[0.5]"
       )}
     >
-      <GlassCardContent className="pt-6">
-        <div className="flex flex-col gap-6">
-          <p className="text-2xl leading-relaxed text-right font-quran">{item.arabic}</p>
-          <p className="text-sm text-muted-foreground leading-relaxed">{item.translation}</p>
+      {/* ProgressBar - Bottom Line */}
+      <div className="absolute bottom-0 left-0 h-1 bg-primary/10 w-full">
+        <div
+          className="h-full bg-primary transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
 
-          {item.repetitions && !hasCounter && (
-            <div className="text-center">
-              <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full">
-                {settings.language === 'ar'
-                  ? `كرر ${item.repetitions} ${item.repetitions > 10 ? 'مرة' : 'مرات'}`
-                  : `Recite ${item.repetitions} time${item.repetitions > 1 ? 's' : ''}`
-                }
-              </span>
-            </div>
-          )}
+      <div className="p-5 flex flex-col gap-4">
+        {/* Arabic Text */}
+        <p className={cn(
+          "text-xl md:text-2xl leading-[2] text-center font-quran text-foreground/90",
+          isCompleted && "text-muted-foreground"
+        )}>
+          {item.arabic}
+        </p>
 
-          {hasCounter && (
-            <div className="flex items-center justify-center gap-4 pt-2">
-              <Button variant="ghost" size="icon" onClick={handleReset} className="text-muted-foreground" aria-label="Reset count">
-                <Repeat className='w-5 h-5' />
-              </Button>
-              <div
-                className={cn(
-                  "relative w-20 h-20 flex items-center justify-center rounded-full text-2xl font-bold font-mono transition-colors",
-                  isCompleted ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
-                )}
-              >
-                {isCompleted ? <Check className="w-8 h-8" /> : count}
-              </div>
-              {/* This div is for spacing to keep the counter centered */}
-              <div className="w-10 h-10"></div>
-            </div>
-          )}
+        {/* Translation (if not Arabic language setting) */}
+        {!isArabic && (
+          <p className="text-sm text-center text-muted-foreground italic leading-relaxed">
+            "{item.translation}"
+          </p>
+        )}
+
+        {/* Controls / Counter */}
+        <div className="flex items-center justify-between mt-2 pt-4 border-t border-border/40">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+            {isArabic ? 'إعادة' : 'Reset'}
+          </Button>
+
+          <div className={cn(
+            "flex flex-col items-center justify-center w-12 h-12 rounded-xl border bg-muted/20 shrink-0 transition-colors",
+            isCompleted ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-foreground"
+          )}>
+            <span className="text-xl font-bold font-mono tracking-tighter tabular-nums">{count}</span>
+          </div>
+
+          <div className="w-16"></div> {/* Spacer for symmetry */}
         </div>
-      </GlassCardContent>
-    </GlassCard>
+      </div>
+    </div>
   );
 }

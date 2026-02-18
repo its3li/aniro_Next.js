@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { CategoryGrid } from '@/components/azkar/category-grid';
 import { azkarData, type AzkarCategory, type AzkarItem } from '@/lib/azkar';
-import { ZikrList } from '@/components/azkar/zikr-list';
+import { ZikrCard } from '@/components/azkar/zikr-card'; // Changed export name to match file
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useSettings } from '@/components/providers/settings-provider';
@@ -35,30 +34,34 @@ export default function AzkarPage() {
 
   const hasSubcategories = currentLevel.subCategories && currentLevel.subCategories.length > 0;
   const hasItems = currentLevel.items && currentLevel.items.length > 0;
-  
+
   const currentName = isArabic ? (currentLevel.id === 'root' ? 'الأذكار' : currentLevel.nameAr) : currentLevel.name;
   const parentName = parentLevel ? (isArabic ? parentLevel.nameAr : parentLevel.name) : '';
 
   return (
-    <div className="p-4 md:p-6 animate-fade-slide-in">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="px-4 pt-4 pb-20 animate-fade-in min-h-screen">
+      <div className="flex items-center gap-3 mb-6">
         {navigationStack.length > 1 && (
-          <Button variant="ghost" size="icon" onClick={handleBack} className="bg-foreground/5 backdrop-blur-lg border border-foreground/10 h-12 w-12 rounded-2xl">
-            <ArrowLeft />
+          <Button variant="ghost" size="icon" onClick={handleBack} className="bg-card border border-border h-10 w-10 rounded-xl shrink-0">
+            <ArrowLeft className="w-5 h-5" />
           </Button>
         )}
         <div>
-          <h1 className="text-3xl font-bold font-headline">{currentName}</h1>
-          {parentLevel && <p className="text-muted-foreground">{parentName}</p>}
+          <h1 className="text-2xl font-bold tracking-tight">{currentName}</h1>
+          {parentLevel && <p className="text-sm text-muted-foreground">{parentName}</p>}
         </div>
       </div>
-      
+
       {hasSubcategories && (
         <CategoryGrid categories={currentLevel.subCategories!} onSelect={handleSelect} />
       )}
-      
+
       {hasItems && (
-        <ZikrList items={currentLevel.items!} />
+        <div className="space-y-4">
+          {currentLevel.items!.map((item, index) => (
+            <ZikrCard key={index} item={item} categoryId={currentLevel.id} index={index} />
+          ))}
+        </div>
       )}
     </div>
   );

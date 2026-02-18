@@ -18,25 +18,38 @@ export const tajweedRulesMap = {
   g: { className: 'ghn', type: 'ghunnah', description: 'Ghunnah: 2 Vowels', descriptionAr: 'غنة (حركتان)' }
 };
 
+// Memoization cache for parsed tajweed — avoids re-running regex on same text
+const tajweedCache = new Map<string, string>();
+const TAJWEED_CACHE_MAX = 500;
+
 export function parseTajweed(text: string, lang: 'ar' | 'en' = 'en'): string {
   if (!text) return '';
 
+  const cacheKey = `${text}_${lang}`;
+  const cached = tajweedCache.get(cacheKey);
+  if (cached) return cached;
+
   // Regex to find patterns like [h:1[ٱ]] or [l[ل]].
-  // It captures the rule identifier, an optional ID, and the content.
-  // The content part (.*?) is non-greedy to handle nested or adjacent rules correctly.
   const regex = /\[([a-z])(?::(\d+))?\[(.*?)\]/g;
 
-  return text.replace(regex, (match, identifier, id, content) => {
+  const result = text.replace(regex, (match, identifier, id, content) => {
     const rule = tajweedRulesMap[identifier as keyof typeof tajweedRulesMap];
     if (rule) {
-      // Conditionally add the data-tajweed attribute only if an ID is present.
       const idAttribute = id ? ` data-tajweed=":${id}"` : '';
       const description = lang === 'ar' ? rule.descriptionAr : rule.description;
       return `<tajweed class="${rule.className}" data-type="${rule.type}" data-description="${description}"${idAttribute}>${content}</tajweed>`;
     }
-    // If the rule identifier is not found, return the original matched string as a fallback.
     return match;
   });
+
+  // LRU eviction
+  if (tajweedCache.size >= TAJWEED_CACHE_MAX) {
+    const oldest = tajweedCache.keys().next().value;
+    if (oldest) tajweedCache.delete(oldest);
+  }
+  tajweedCache.set(cacheKey, result);
+
+  return result;
 }
 
 export function stripTajweed(text: string): string {

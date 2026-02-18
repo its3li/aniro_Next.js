@@ -8,7 +8,7 @@ const GlassCard = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "bg-foreground/5 backdrop-blur-lg border border-foreground/10 rounded-3xl shadow-lg",
+      "bg-card border border-border rounded-2xl",
       className
     )}
     {...props}
@@ -22,7 +22,7 @@ const GlassCardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("p-6 pb-2", className)}
+    className={cn("px-4 pt-4 pb-2", className)}
     {...props}
   />
 ));
@@ -35,7 +35,7 @@ const GlassCardContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("p-6 pt-0", className)}
+    className={cn("px-4 pb-4 pt-0", className)}
     {...props}
   />
 ));

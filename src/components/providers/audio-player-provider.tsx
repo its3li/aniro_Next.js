@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import type { Surah, Verse } from '@/lib/quran';
 import { useSettings } from './settings-provider';
 
@@ -288,7 +288,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => () => cleanupAudio(), [cleanupAudio]);
 
-  const value = {
+  const value = useMemo(() => ({
     playerState,
     isReciterModalOpen,
     setReciterModalOpen,
@@ -301,7 +301,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     handleSeek,
     handlePlayerClose,
     getVerseByKey,
-  };
+  }), [playerState, isReciterModalOpen, playVerse, playSurah, handlePlayPause, handleNext, handlePrev, handleSeek, handlePlayerClose, getVerseByKey]);
 
   return (
     <AudioPlayerContext.Provider value={value}>

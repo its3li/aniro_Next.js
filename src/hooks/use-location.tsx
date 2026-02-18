@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSettings } from '@/components/providers/settings-provider';
+import { Geolocation } from '@capacitor/geolocation';
 
 interface LocationState {
     coordinates: {
@@ -44,7 +45,38 @@ export function useLocation() {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
 
         try {
-            // 1. Try to load from cache first for immediate UI
+            // 0. Try Capacitor Geolocation (GPS) if available
+            try {
+                const position = await Geolocation.getCurrentPosition({
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                });
+
+                if (position.coords) {
+                    const { latitude, longitude } = position.coords;
+
+                    // Reverse geocoding (optional, to get city/country name from coords)
+                    // For now, we'll try to get city/country from IP APIs below if needed, 
+                    // or just use coordinates. 
+                    // Let's use the coordinates immediately.
+
+                    setState({
+                        coordinates: { latitude, longitude },
+                        city: null, // Will be filled by IP fallback or reverse geocoding if we add it
+                        country: null,
+                        error: null,
+                        isLoading: false,
+                    });
+                    // We can continue to fetch IP location to get city/country names
+                    // but we have the accurate coords now.
+                }
+            } catch (geoError) {
+                console.warn('Geolocation failed or denied:', geoError);
+                // Continue to IP fallback
+            }
+
+            // 1. Try to load from cache first for immediate UI (if GPS failed or taking time)
             const cached = localStorage.getItem('aniro_location');
             if (cached) {
                 try {

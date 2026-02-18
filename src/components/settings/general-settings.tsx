@@ -17,15 +17,15 @@ export function GeneralSettings() {
   return (
     <GlassCard>
       <GlassCardHeader>
-        <h2 className="text-xl font-bold font-headline">{isArabic ? 'عام' : 'General'}</h2>
+        <h2 className="text-base font-semibold">{isArabic ? 'عام' : 'General'}</h2>
       </GlassCardHeader>
       <GlassCardContent>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between p-2 rounded-lg">
-            <Label htmlFor="language-switch" className="font-medium">{isArabic ? 'اللغة' : 'Language'}</Label>
-            <div className="flex items-center gap-3">
-              <span className={cn("text-sm font-medium", settings.language === 'en' ? 'text-primary' : 'text-muted-foreground')}>
-                English
+        <div className="divide-y divide-border">
+          <div className="flex items-center justify-between py-3 first:pt-0">
+            <Label htmlFor="language-switch" className="text-sm">{isArabic ? 'اللغة' : 'Language'}</Label>
+            <div className="flex items-center gap-2">
+              <span className={cn("text-xs", settings.language === 'en' ? 'text-primary font-medium' : 'text-muted-foreground')}>
+                EN
               </span>
               <Switch
                 id="language-switch"
@@ -33,13 +33,13 @@ export function GeneralSettings() {
                 onCheckedChange={(checked) => setLanguage(checked ? 'ar' : 'en')}
                 dir="ltr"
               />
-              <span className={cn("text-sm font-medium", settings.language === 'ar' ? 'text-primary' : 'text-muted-foreground')}>
+              <span className={cn("text-xs", settings.language === 'ar' ? 'text-primary font-medium' : 'text-muted-foreground')}>
                 عربي
               </span>
             </div>
           </div>
-          <div className="flex items-center justify-between p-2 rounded-lg">
-            <Label htmlFor="dark-mode-switch" className="font-medium">{isArabic ? 'الوضع الداكن' : 'Dark Mode'}</Label>
+          <div className="flex items-center justify-between py-3">
+            <Label htmlFor="dark-mode-switch" className="text-sm">{isArabic ? 'الوضع الداكن' : 'Dark Mode'}</Label>
             <Switch
               id="dark-mode-switch"
               checked={theme === 'dark'}
@@ -48,10 +48,10 @@ export function GeneralSettings() {
             />
           </div>
 
-          <div className="flex items-center justify-between p-2 rounded-lg">
-            <div className="flex flex-col gap-1">
-              <Label className="font-medium">{isArabic ? 'الموقع الحالي' : 'Current Location'}</Label>
-              <p className="text-xs text-muted-foreground">
+          <div className="flex items-center justify-between py-3 last:pb-0">
+            <div className="flex flex-col gap-0.5">
+              <Label className="text-sm">{isArabic ? 'الموقع الحالي' : 'Current Location'}</Label>
+              <p className="text-[11px] text-muted-foreground">
                 {city || (isArabic ? 'جار تحديد الموقع...' : 'Detecting location...')}
                 {country ? `, ${country}` : ''}
               </p>
@@ -59,10 +59,11 @@ export function GeneralSettings() {
             <Button
               variant="outline"
               size="sm"
+              className="h-8 text-xs rounded-lg"
               onClick={() => refreshLocation()}
               disabled={isLoading}
             >
-              {isLoading ? (isArabic ? 'جاري التحديث...' : 'Updating...') : (isArabic ? 'تحديث' : 'Refresh')}
+              {isLoading ? (isArabic ? 'جاري...' : 'Updating...') : (isArabic ? 'تحديث' : 'Refresh')}
             </Button>
           </div>
         </div>

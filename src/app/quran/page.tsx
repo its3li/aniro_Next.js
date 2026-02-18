@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { SurahList } from '@/components/quran/surah-list';
 import { QuranReader } from '@/components/quran/quran-reader';
 import type { Surah, SurahInfo } from '@/lib/quran';
-import { getSurahList } from '@/lib/quran';
+import { getSurahList, getSurahWithTranslation } from '@/lib/quran';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/components/providers/settings-provider';
@@ -19,23 +19,19 @@ export default function QuranPage() {
   const { settings } = useSettings();
   const isArabic = settings.language === 'ar';
 
-  // Track if we've already handled URL params (to prevent re-triggering on back)
   const hasHandledParamsRef = useRef(false);
 
-  // Handle URL params for direct navigation (from search results) - ONLY ON INITIAL LOAD
   useEffect(() => {
-    // Skip if we've already handled params or no params
     if (hasHandledParamsRef.current) return;
 
     const surahParam = searchParams.get('surah');
     const ayahParam = searchParams.get('ayah');
 
     if (surahParam) {
-      hasHandledParamsRef.current = true; // Mark as handled
+      hasHandledParamsRef.current = true;
       const surahNumber = parseInt(surahParam, 10);
       const ayahNumber = ayahParam ? parseInt(ayahParam, 10) : undefined;
 
-      // Fetch surah list and find the surah
       getSurahList().then((surahs) => {
         const surah = surahs.find(s => s.number === surahNumber);
         if (surah) {
@@ -46,7 +42,7 @@ export default function QuranPage() {
     }
   }, [searchParams]);
 
-  // Fetch full surah when selected
+  // Fetch full surah — uses offline-first cached function (bundled JSON → IDB → network)
   useEffect(() => {
     if (!selectedSurahInfo) {
       setFullSurah(null);
@@ -65,31 +61,17 @@ export default function QuranPage() {
         const selectedEdition = quranEditionMap[settings.quranEdition] || 'quran-uthmani';
         const translationEdition = isArabic ? 'ar.jalalayn' : 'en.sahih';
 
-        const response = await fetch(`https://api.alquran.cloud/v1/surah/${selectedSurahInfo.number}/editions/${selectedEdition},${translationEdition}`);
+        const surah = await getSurahWithTranslation(
+          selectedSurahInfo.number,
+          selectedEdition,
+          translationEdition
+        );
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (!surah) {
+          throw new Error(isArabic ? 'فشل تحميل السورة' : 'Failed to load Surah');
         }
 
-        const data = await response.json();
-
-        if (data.code !== 200 || !data.data || data.data.length < 2) {
-          throw new Error("Invalid API response from Al Quran Cloud.");
-        }
-
-        const [arabicEdition, translationEditionData] = data.data;
-
-        const combinedVerses: Surah['verses'] = arabicEdition.ayahs.map((ayah: any, index: number) => ({
-          number: { inQuran: ayah.number, inSurah: ayah.numberInSurah },
-          text: ayah.text,
-          translation: translationEditionData.ayahs[index].text,
-        }));
-
-        setFullSurah({
-          ...selectedSurahInfo,
-          verses: combinedVerses,
-        });
-
+        setFullSurah(surah);
       } catch (error) {
         console.error("Failed to fetch Surah data:", error);
         toast({
@@ -110,7 +92,7 @@ export default function QuranPage() {
     setSelectedSurahInfo(null);
     setFullSurah(null);
     setInitialVerseNumber(undefined);
-    hasHandledParamsRef.current = false; // Reset so next search navigation works
+    hasHandledParamsRef.current = false;
   }
 
   const handleSurahSelect = (surah: SurahInfo, initialVerse?: number) => {
@@ -121,15 +103,14 @@ export default function QuranPage() {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="p-4 md:p-6 space-y-4">
-          <h1 className="text-3xl font-bold font-headline mb-2">{isArabic ? 'القرآن الكريم' : 'The Holy Quran'}</h1>
-          <Skeleton className="h-12 w-full" />
+        <div className="px-4 pt-4 space-y-3">
+          <h1 className="text-xl font-semibold mb-2">{isArabic ? 'القرآن الكريم' : 'The Holy Quran'}</h1>
+          <Skeleton className="h-10 w-full rounded-xl" />
           <div className="flex flex-col gap-2">
-            <Skeleton className="h-20 w-full rounded-2xl" />
-            <Skeleton className="h-20 w-full rounded-2xl" />
-            <Skeleton className="h-20 w-full rounded-2xl" />
-            <Skeleton className="h-20 w-full rounded-2xl" />
-            <Skeleton className="h-20 w-full rounded-2xl" />
+            <Skeleton className="h-16 w-full rounded-xl" />
+            <Skeleton className="h-16 w-full rounded-xl" />
+            <Skeleton className="h-16 w-full rounded-xl" />
+            <Skeleton className="h-16 w-full rounded-xl" />
           </div>
         </div>
       );
@@ -140,15 +121,15 @@ export default function QuranPage() {
     }
 
     return (
-      <div className="p-4 md:p-6">
-        <h1 className="text-3xl font-bold font-headline mb-6">{isArabic ? 'القرآن الكريم' : 'The Holy Quran'}</h1>
+      <div className="px-4 pt-4 animate-fade-in">
+        <h1 className="text-xl font-semibold mb-4">{isArabic ? 'القرآن الكريم' : 'The Holy Quran'}</h1>
         <SurahList onSurahSelect={handleSurahSelect} />
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-slide-in">
+    <div>
       {renderContent()}
     </div>
   );
