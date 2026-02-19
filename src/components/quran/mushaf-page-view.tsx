@@ -20,7 +20,14 @@ import { useSettings } from "../providers/settings-provider";
 import { Skeleton } from "../ui/skeleton";
 import { TajweedLegend } from "./tajweed-legend";
 import { useToast } from "@/hooks/use-toast";
-import { Play, Pause, Copy, PlayCircle, PauseCircle } from "lucide-react";
+import {
+  Play,
+  Pause,
+  Copy,
+  PlayCircle,
+  PauseCircle,
+  BookmarkPlus,
+} from "lucide-react";
 import { useAudioPlayer } from "../providers/audio-player-provider";
 import { useLastRead } from "@/hooks/use-last-read";
 
@@ -246,6 +253,32 @@ export function MushafPageView({
     [playVerse]
   );
 
+  const handleBookmarkVerse = useCallback(
+    (ayah: PageAyah) => {
+      const hizbInfo = getHizbInfo(pageData?.hizbQuarter ?? 1, "en");
+
+      saveLastRead({
+        surahName: ayah.surah.englishName,
+        surahNameAr: ayah.surah.name,
+        surahNumber: ayah.surah.number,
+        verseNumber: ayah.numberInSurah,
+        pageNumber: pageData?.pageNumber ?? currentPage,
+        juzNumber: pageData?.juz ?? 1,
+        hizbNumber: hizbInfo.hizbNumber,
+        timestamp: Date.now(),
+      });
+
+      toast({
+        title: isArabic ? "تم حفظ العلامة" : "Bookmark saved",
+        description: isArabic
+          ? `${ayah.surah.name} • الآية ${ayah.numberInSurah}`
+          : `${ayah.surah.englishName} • Ayah ${ayah.numberInSurah}`,
+      });
+      setSelectedAyah(null);
+    },
+    [currentPage, isArabic, pageData, saveLastRead, toast]
+  );
+
   // Play all verses on current page continuously
   const handlePlayPage = useCallback(() => {
     if (!pageData) return;
@@ -387,6 +420,7 @@ export function MushafPageView({
               onVerseTap={handleVerseTap}
               onCopy={handleCopyVerse}
               onPlay={handlePlayVerse}
+              onBookmark={handleBookmarkVerse}
               playerState={playerState}
             />
           ) : (
@@ -413,6 +447,7 @@ const MushafPageContent = React.memo(function MushafPageContent({
   onVerseTap,
   onCopy,
   onPlay,
+  onBookmark,
   playerState,
 }: {
   page: MushafPage;
@@ -423,6 +458,7 @@ const MushafPageContent = React.memo(function MushafPageContent({
   onVerseTap: (ayah: PageAyah) => void;
   onCopy: (ayah: PageAyah) => void;
   onPlay: (ayah: PageAyah) => void;
+  onBookmark: (ayah: PageAyah) => void;
   playerState: any;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -561,6 +597,12 @@ const MushafPageContent = React.memo(function MushafPageContent({
                         onClick={() => onCopy(ayah)}
                       >
                         <Copy className="w-3 h-3" />
+                      </button>
+                      <button
+                        className="w-6 h-6 flex items-center justify-center rounded-full active:bg-foreground/10"
+                        onClick={() => onBookmark(ayah)}
+                      >
+                        <BookmarkPlus className="w-3 h-3" />
                       </button>
                     </span>
                   )}
