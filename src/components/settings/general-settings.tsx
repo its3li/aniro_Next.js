@@ -7,10 +7,11 @@ import { useLocation } from '@/hooks/use-location';
 import { useTheme } from '../providers/theme-provider';
 import { useSettings } from '../providers/settings-provider';
 import { cn } from '@/lib/utils';
+import { Volume2, VolumeX } from 'lucide-react';
 
 export function GeneralSettings() {
   const { theme, setTheme } = useTheme();
-  const { settings, setLanguage } = useSettings();
+  const { settings, setLanguage, setAzanMode, setIncludeIshraq } = useSettings();
   const { city, country, refreshLocation, isLoading } = useLocation();
   const isArabic = settings.language === 'ar';
 
@@ -48,7 +49,7 @@ export function GeneralSettings() {
             />
           </div>
 
-          <div className="flex items-center justify-between py-3 last:pb-0">
+          <div className="flex items-center justify-between py-3">
             <div className="flex flex-col gap-0.5">
               <Label className="text-sm">{isArabic ? 'الموقع الحالي' : 'Current Location'}</Label>
               <p className="text-[11px] text-muted-foreground">
@@ -65,6 +66,43 @@ export function GeneralSettings() {
             >
               {isLoading ? (isArabic ? 'جاري...' : 'Updating...') : (isArabic ? 'تحديث' : 'Refresh')}
             </Button>
+          </div>
+
+          {/* Azan Mode */}
+          <div className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-2">
+              {settings.azanMode === 'full' ? <Volume2 className="w-4 h-4 text-primary" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
+              <div className="flex flex-col gap-0.5">
+                <Label className="text-sm">{isArabic ? 'صوت الأذان' : 'Azan Sound'}</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  {settings.azanMode === 'full' 
+                    ? (isArabic ? 'صوت الأذان الكامل' : 'Full azan sound') 
+                    : (isArabic ? 'إشعار صامت فقط' : 'Silent notification only')}
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="azan-mode-switch"
+              checked={settings.azanMode === 'full'}
+              onCheckedChange={(checked) => setAzanMode(checked ? 'full' : 'silent')}
+              dir="ltr"
+            />
+          </div>
+
+          {/* Include Ishraq */}
+          <div className="flex items-center justify-between py-3 last:pb-0">
+            <div className="flex flex-col gap-0.5">
+              <Label className="text-sm">{isArabic ? 'صلاة الضحى' : 'Duha Prayer'}</Label>
+              <p className="text-[11px] text-muted-foreground">
+                {isArabic ? 'إظهار وقت صلاة الضحى (20 دقيقة بعد الشروق)' : 'Show Duha prayer time (20 min after sunrise)'}
+              </p>
+            </div>
+            <Switch
+              id="ishraq-switch"
+              checked={settings.includeIshraq}
+              onCheckedChange={setIncludeIshraq}
+              dir="ltr"
+            />
           </div>
         </div>
       </GlassCardContent>
