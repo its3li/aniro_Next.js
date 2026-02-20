@@ -27,6 +27,7 @@ import {
   PlayCircle,
   PauseCircle,
   BookmarkPlus,
+  ChevronRight,
 } from "lucide-react";
 import { useAudioPlayer } from "../providers/audio-player-provider";
 import { useLastRead } from "@/hooks/use-last-read";
@@ -332,7 +333,7 @@ export function MushafPageView({
 
   return (
     <div
-      className="mushaf-container flex flex-col"
+      className="mushaf-container flex h-[100dvh] flex-col overflow-hidden"
       onClick={() => setSelectedAyah(null)}
     >
       {/* Fixed header: back · surah · juz/hizb/page · play */}
@@ -408,6 +409,11 @@ export function MushafPageView({
         onTouchEnd={handleTouchEnd}
       >
         <div className={`mushaf-page-wrapper h-full px-2 ${slideClass}`}>
+          <div className="pointer-events-none absolute top-2 right-4 z-20 flex items-center gap-1 rounded-full bg-background/80 px-2 py-0.5 text-[11px] text-muted-foreground shadow-sm border border-border/50">
+            <span>{isArabic ? "اسحب" : "Swipe"}</span>
+            <ChevronRight className="h-3 w-3" />
+          </div>
+
           {isLoading ? (
             <PageSkeleton />
           ) : pageData ? (
@@ -510,10 +516,10 @@ const MushafPageContent = React.memo(function MushafPageContent({
   }
 
   return (
-    <div className="h-full w-full flex items-start justify-center">
+    <div className="h-full w-full overflow-hidden flex items-start justify-center">
       <div
         ref={contentRef}
-        className="mushaf-page font-quran text-[1.2rem] leading-[2.2] text-justify w-full h-full max-w-[920px]"
+        className="mushaf-page font-quran text-[1.2rem] leading-[2.2] text-justify w-full max-w-[920px] overflow-hidden"
         dir="rtl"
         style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}
       >
