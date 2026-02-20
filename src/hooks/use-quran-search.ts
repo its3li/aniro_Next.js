@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import MiniSearch, { SearchResult } from 'minisearch';
-import { get, set, keys } from 'idb-keyval';
+import { get, set } from 'idb-keyval';
 
 // Types for search results
 export interface QuranSearchResult {
@@ -15,14 +15,14 @@ export interface QuranSearchResult {
     score: number;
 }
 
-interface IndexedAyah {
+interface CompactAyah {
     id: string;
-    surahNumber: number;
-    surahName: string;
-    surahEnglishName: string;
-    ayahNumber: number;
-    ayahText: string;
-    normalizedText: string;
+    s: number;
+    n: string;
+    e: string;
+    a: number;
+    t: string;
+    ed: string;
 }
 
 // Arabic Tashkeel (diacritics) regex
@@ -33,9 +33,6 @@ const ARABIC_NORMALIZATION_MAP: Record<string, string> = {
     'آ': 'ا', 'أ': 'ا', 'إ': 'ا', 'ٱ': 'ا',
     'ؤ': 'و', 'ئ': 'ي', 'ة': 'ه', 'ى': 'ي',
 };
-
-// Cache key for the serialized index
-const SEARCH_INDEX_CACHE_KEY = 'quran_search_index_v1';
 
 export function normalizeArabic(text: string): string {
     if (!text) return '';
@@ -50,115 +47,118 @@ function processTerm(term: string): string {
     return normalizeArabic(term).toLowerCase();
 }
 
-export function useQuranSearch() {
-    const [isIndexing, setIsIndexing] = useState(false);
-    const [isIndexed, setIsIndexed] = useState(false);
-    const [searchResults, setSearchResults] = useState<QuranSearchResult[]>([]);
-
-    const miniSearchRef = useRef<MiniSearch<IndexedAyah> | null>(null);
-    const indexingPromiseRef = useRef<Promise<void> | null>(null);
-
-    // Create MiniSearch instance with config
-    const createMiniSearch = useCallback(() => {
-        return new MiniSearch<IndexedAyah>({
-            fields: ['normalizedText', 'ayahText'],
-            storeFields: ['surahNumber', 'surahName', 'surahEnglishName', 'ayahNumber', 'ayahText'],
+// Build index from bundled documents - LAZY loading
+async function buildIndexFromDocuments(): Promise<MiniSearch<any> | null> {
+    try {
+        const response = await fetch('/data/quran/search/all-ayat.json');
+        if (!response.ok) {
+            return null;
+        }
+        const compactDocs: CompactAyah[] = await response.json();
+        
+        const miniSearch = new MiniSearch({
+            fields: ['normalizedText', 'ayahText', 'surahName'],
+            storeFields: ['surahNumber', 'surahName', 'surahEnglishName', 'ayahNumber', 'ayahText', 'edition'],
             searchOptions: {
-                boost: { normalizedText: 2, ayahText: 1 },
-                fuzzy: 0.1,
+                boost: { normalizedText: 3, ayahText: 1, surahName: 2 },
+                fuzzy: 0.15,
                 prefix: true,
                 combineWith: 'AND',
             },
             processTerm,
         });
-    }, []);
+        
+        const documents = compactDocs.map(d => ({
+            id: d.id,
+            surahNumber: d.s,
+            surahName: d.n,
+            surahEnglishName: d.e,
+            ayahNumber: d.a,
+            ayahText: d.t,
+            edition: d.ed,
+            normalizedText: normalizeArabic(d.t),
+        }));
+        
+        // Add in chunks to avoid blocking
+        const CHUNK_SIZE = 500;
+        for (let i = 0; i < documents.length; i += CHUNK_SIZE) {
+            const chunk = documents.slice(i, i + CHUNK_SIZE);
+            miniSearch.addAll(chunk);
+            // Yield to main thread
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        
+        return miniSearch;
+    } catch (err) {
+        console.error('[QuranSearch] Failed to build:', err);
+        return null;
+    }
+}
 
-    // Load index from cache or build it
-    const buildIndex = useCallback(async (): Promise<void> => {
-        if (indexingPromiseRef.current) return indexingPromiseRef.current;
+const INDEX_CACHE_KEY = 'quran_search_index_v3';
+
+export function useQuranSearch() {
+    const [isIndexing, setIsIndexing] = useState(false);
+    const [isIndexed, setIsIndexed] = useState(false);
+    const [searchResults, setSearchResults] = useState<QuranSearchResult[]>([]);
+
+    const miniSearchRef = useRef<MiniSearch<any> | null>(null);
+    const initPromiseRef = useRef<Promise<void> | null>(null);
+
+    // Initialize search index - LAZY: only when needed
+    const initIndex = useCallback(async (): Promise<void> => {
+        if (initPromiseRef.current) return initPromiseRef.current;
         if (isIndexed && miniSearchRef.current) return Promise.resolve();
 
-        const indexPromise = (async () => {
+        const initPromise = (async () => {
+            setIsIndexing(true);
             try {
-                // Try to load from cache first
-                const cachedIndex = await get(SEARCH_INDEX_CACHE_KEY);
-                if (cachedIndex) {
-                    miniSearchRef.current = MiniSearch.loadJSON(cachedIndex, {
-                        fields: ['normalizedText', 'ayahText'],
-                        storeFields: ['surahNumber', 'surahName', 'surahEnglishName', 'ayahNumber', 'ayahText'],
+                // Try IndexedDB cache first (fast)
+                const cached = await get(INDEX_CACHE_KEY);
+                if (cached) {
+                    // Use setTimeout to avoid blocking UI during load
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                    miniSearchRef.current = MiniSearch.loadJSON(cached, {
+                        fields: ['normalizedText', 'ayahText', 'surahName'],
+                        storeFields: ['surahNumber', 'surahName', 'surahEnglishName', 'ayahNumber', 'ayahText', 'edition'],
                         processTerm,
                     });
                     setIsIndexed(true);
-                    console.log('[QuranSearch] Loaded index from cache');
                     return;
                 }
 
-                // No cache - build index silently
-                setIsIndexing(true);
-                const miniSearch = createMiniSearch();
-                const allDocuments: IndexedAyah[] = [];
+                // Build fresh index
+                const miniSearch = await buildIndexFromDocuments();
 
-                const allKeys = await keys();
-                const surahKeys = allKeys.filter(
-                    (key) => typeof key === 'string' && key.startsWith('surah_') && !key.includes('list')
-                );
-
-                for (const key of surahKeys) {
-                    const surahData = await get(key as string);
-                    if (!surahData) continue;
-
-                    const ayahs = surahData.ayahs || surahData.verses || [];
-                    for (const ayah of ayahs) {
-                        const ayahNumber = ayah.numberInSurah || ayah.number?.inSurah || 0;
-                        const ayahText = ayah.text || '';
-                        allDocuments.push({
-                            id: `${surahData.number}:${ayahNumber}`,
-                            surahNumber: surahData.number,
-                            surahName: surahData.name,
-                            surahEnglishName: surahData.englishName,
-                            ayahNumber,
-                            ayahText,
-                            normalizedText: normalizeArabic(ayahText),
-                        });
-                    }
+                if (miniSearch) {
+                    miniSearchRef.current = miniSearch;
+                    setIsIndexed(true);
+                    // Cache for next time (async, don't wait)
+                    set(INDEX_CACHE_KEY, JSON.stringify(miniSearch)).catch(() => {});
                 }
-
-                if (allDocuments.length > 0) {
-                    miniSearch.addAll(allDocuments);
-                    // Cache the serialized index
-                    const serialized = JSON.stringify(miniSearch);
-                    await set(SEARCH_INDEX_CACHE_KEY, serialized);
-                    console.log(`[QuranSearch] Built and cached index with ${allDocuments.length} ayahs`);
-                }
-
-                miniSearchRef.current = miniSearch;
-                setIsIndexed(true);
             } catch (err) {
-                console.error('[QuranSearch] Indexing failed:', err);
+                console.error('[QuranSearch] Init failed:', err);
             } finally {
                 setIsIndexing(false);
             }
         })();
 
-        indexingPromiseRef.current = indexPromise;
-        return indexPromise;
-    }, [isIndexed, createMiniSearch]);
+        initPromiseRef.current = initPromise;
+        return initPromise;
+    }, [isIndexed]);
 
-    // Prebuild index in background
-    const prebuildIndex = useCallback(() => {
-        buildIndex();
-    }, [buildIndex]);
-
-    // Search function
+    // Search function - lazy load only when user searches
     const search = useCallback(async (query: string): Promise<QuranSearchResult[]> => {
         if (!query.trim()) {
             setSearchResults([]);
             return [];
         }
 
-        await buildIndex();
+        await initIndex();
 
-        if (!miniSearchRef.current) return [];
+        if (!miniSearchRef.current) {
+            return [];
+        }
 
         const results = miniSearchRef.current.search(query);
         const mappedResults: QuranSearchResult[] = results.map((result: SearchResult) => ({
@@ -173,7 +173,7 @@ export function useQuranSearch() {
 
         setSearchResults(mappedResults);
         return mappedResults;
-    }, [buildIndex]);
+    }, [initIndex]);
 
     const clearResults = useCallback(() => {
         setSearchResults([]);
@@ -185,6 +185,5 @@ export function useQuranSearch() {
         clearResults,
         isIndexing,
         isIndexed,
-        prebuildIndex,
     };
 }

@@ -52,7 +52,7 @@ export function SurahList({ onSurahSelect }: SurahListProps) {
   const isArabic = settings.language === 'ar';
 
   // Use the offline verse search hook
-  const { search, searchResults, clearResults, isIndexing, prebuildIndex } = useQuranSearch();
+  const { search, searchResults, clearResults, isIndexing } = useQuranSearch();
 
   // Load surah list on mount
   useEffect(() => {
@@ -68,9 +68,8 @@ export function SurahList({ onSurahSelect }: SurahListProps) {
       }
     };
     fetchSurahs();
-    // Pre-build search index in background
-    prebuildIndex();
-  }, [prebuildIndex]);
+    // Search index auto-loads in hook
+  }, []);
 
   // Debounced verse search
   useEffect(() => {

@@ -13,7 +13,7 @@ export default {
       fontFamily: {
         body: ['Inter', 'sans-serif'],
         headline: ['Inter', 'sans-serif'],
-        quran: ['Amiri', 'serif'],
+        quran: ['"Scheherazade New"', 'Amiri', 'serif'],
         code: ['monospace'],
       },
       colors: {
