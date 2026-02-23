@@ -1,7 +1,8 @@
-import { Coordinates, CalculationMethod, PrayerTimes, Prayer } from 'adhan';
+import { Coordinates, CalculationMethod, PrayerTimes, Prayer, SunnahTimes } from 'adhan';
 
 export const prayerNameMapping = {
     fajr: { en: 'Fajr', ar: 'الفجر' },
+    ishraq: { en: 'Ishraq', ar: 'الضحى' },
     dhuhr: { en: 'Dhuhr', ar: 'الظهر' },
     asr: { en: 'Asr', ar: 'العصر' },
     maghrib: { en: 'Maghrib', ar: 'المغرب' },
@@ -79,10 +80,11 @@ function getCalculationParams(method: CalculationMethodName) {
 const DEFAULT_LAT = 21.4225;
 const DEFAULT_LNG = 39.8262;
 
-export function getPrayerTimes(date: Date, lat: number = DEFAULT_LAT, lng: number = DEFAULT_LNG, offsetHours: number = 0, method: CalculationMethodName = 'muslim_world_league'): PrayerTime[] {
+export function getPrayerTimes(date: Date, lat: number = DEFAULT_LAT, lng: number = DEFAULT_LNG, offsetHours: number = 0, method: CalculationMethodName = 'muslim_world_league', includeIshraq: boolean = true): PrayerTime[] {
     const coordinates = new Coordinates(lat, lng);
     const params = getCalculationParams(method);
     const prayerTimes = new PrayerTimes(coordinates, date, params);
+    const sunnahTimes = new SunnahTimes(prayerTimes);
 
     const formatTime = (d: Date) => {
         // Apply offset
@@ -94,13 +96,28 @@ export function getPrayerTimes(date: Date, lat: number = DEFAULT_LAT, lng: numbe
         return new Date(d.getTime() + offsetHours * 60 * 60 * 1000);
     }
 
-    return [
+    const prayers: PrayerTime[] = [
         { name: 'fajr', time: formatTime(prayerTimes.fajr), date: getAdjustedDate(prayerTimes.fajr) },
+    ];
+
+    // Add Ishraq (Duha) - ~20 minutes after sunrise (when sun reaches height of a spear)
+    if (includeIshraq) {
+        const ishraqTime = new Date(prayerTimes.sunrise.getTime() + 20 * 60 * 1000); // Sunrise + 20 minutes
+        prayers.push({ 
+            name: 'ishraq', 
+            time: formatTime(ishraqTime), 
+            date: getAdjustedDate(ishraqTime) 
+        });
+    }
+
+    prayers.push(
         { name: 'dhuhr', time: formatTime(prayerTimes.dhuhr), date: getAdjustedDate(prayerTimes.dhuhr) },
         { name: 'asr', time: formatTime(prayerTimes.asr), date: getAdjustedDate(prayerTimes.asr) },
         { name: 'maghrib', time: formatTime(prayerTimes.maghrib), date: getAdjustedDate(prayerTimes.maghrib) },
         { name: 'isha', time: formatTime(prayerTimes.isha), date: getAdjustedDate(prayerTimes.isha) },
-    ];
+    );
+
+    return prayers;
 }
 
 export function getNextPrayer(lat: number = DEFAULT_LAT, lng: number = DEFAULT_LNG, offsetHours: number = 0, method: CalculationMethodName = 'muslim_world_league'): NextPrayer | null {

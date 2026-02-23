@@ -17,6 +17,7 @@ import { useSettings } from "../providers/settings-provider";
 
 const prayerIcons: { [key: string]: React.ElementType } = {
   fajr: Sunrise,
+  ishraq: Sun,
   dhuhr: Sun,
   asr: Sun,
   maghrib: Sunset,
@@ -49,7 +50,8 @@ export function NextPrayerCard() {
       lat,
       lng,
       totalOffset,
-      settings.calculationMethod
+      settings.calculationMethod,
+      settings.includeIshraq
     );
     setPrayerTimes(times);
 

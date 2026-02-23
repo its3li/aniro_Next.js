@@ -13,6 +13,8 @@ import { CalculationMethodName, DSTMode } from '@/lib/prayer';
 
 export type TimeFormat = '12h' | '24h';
 
+type AzanMode = 'full' | 'silent';
+
 type Settings = {
   fontSize: number;
   prayerOffset: number;
@@ -26,6 +28,8 @@ type Settings = {
   widgetTheme: 'default' | 'system' | 'custom';
   widgetBackgroundColor: string;
   appTheme: 'system' | 'light' | 'dark';
+  azanMode: AzanMode;
+  includeIshraq: boolean;
 };
 
 type SettingsProviderState = {
@@ -42,6 +46,8 @@ type SettingsProviderState = {
   setWidgetTheme: (theme: 'default' | 'system' | 'custom') => void;
   setWidgetBackgroundColor: (color: string) => void;
   setAppTheme: (theme: 'system' | 'light' | 'dark') => void;
+  setAzanMode: (mode: AzanMode) => void;
+  setIncludeIshraq: (include: boolean) => void;
   availableReciters: Reciter[];
 };
 
@@ -58,6 +64,8 @@ const defaultSettings: Settings = {
   widgetTheme: 'default',
   widgetBackgroundColor: '#24252B',
   appTheme: 'system',
+  azanMode: 'full',
+  includeIshraq: true,
 };
 
 const SettingsProviderContext = createContext<SettingsProviderState>({
@@ -200,6 +208,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(s => ({ ...s, widgetBackgroundColor: color }));
   }
 
+  const setAzanMode = (mode: AzanMode) => {
+    setSettings(s => ({ ...s, azanMode: mode }));
+  }
+
+  const setIncludeIshraq = (include: boolean) => {
+    setSettings(s => ({ ...s, includeIshraq: include }));
+  }
+
   const value = {
     settings,
     setFontSize,
@@ -214,6 +230,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setWidgetTheme,
     setWidgetBackgroundColor,
     setAppTheme,
+    setAzanMode,
+    setIncludeIshraq,
     availableReciters,
   };
 

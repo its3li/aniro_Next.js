@@ -27,7 +27,6 @@ import {
   PlayCircle,
   PauseCircle,
   BookmarkPlus,
-  ChevronRight,
 } from "lucide-react";
 import { useAudioPlayer } from "../providers/audio-player-provider";
 import { useLastRead } from "@/hooks/use-last-read";
@@ -101,32 +100,6 @@ export function MushafPageView({
     };
   }, [currentPage, edition]);
 
-  // Save Last Read (debounced)
-  useEffect(() => {
-    if (!pageData || pageData.pageNumber !== currentPage) return;
-
-    const timer = setTimeout(() => {
-      const firstAyah = pageData.ayahs[0];
-      // Find majority surah on page if multiple? No, first ayah is standard for resume.
-      // But if page starts middle of surah, firstAyah is correct.
-
-      const hizbInfo = getHizbInfo(pageData.hizbQuarter, "en");
-
-      saveLastRead({
-        surahName: firstAyah.surah.englishName,
-        surahNameAr: firstAyah.surah.name,
-        surahNumber: firstAyah.surah.number,
-        verseNumber: firstAyah.numberInSurah,
-        pageNumber: currentPage,
-        juzNumber: pageData.juz,
-        hizbNumber: hizbInfo.hizbNumber,
-        timestamp: Date.now(),
-      });
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [currentPage, pageData, saveLastRead]);
-
   // Highlight initial verse
   useEffect(() => {
     if (initialVerseNumber && pageData) {
@@ -142,6 +115,9 @@ export function MushafPageView({
     }
   }, [pageData, initialVerseNumber, surahNumber]);
 
+  // Track target verse across page loads
+  const targetVerseRef = useRef<number | null>(null);
+
   // Find correct page for initial verse
   useEffect(() => {
     if (!initialVerseNumber) return;
@@ -156,6 +132,7 @@ export function MushafPageView({
               a.numberInSurah === initialVerseNumber
           );
           if (found) {
+            targetVerseRef.current = found.number;
             setCurrentPage(p);
             return;
           }
@@ -165,6 +142,18 @@ export function MushafPageView({
     findPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When page data loads, select and highlight the target verse
+  useEffect(() => {
+    if (pageData && targetVerseRef.current) {
+      const foundOnPage = pageData.ayahs.find(a => a.number === targetVerseRef.current);
+      if (foundOnPage) {
+        setSelectedAyah(foundOnPage.number);
+        setHighlightedAyah(foundOnPage.number);
+        targetVerseRef.current = null;
+      }
+    }
+  }, [pageData]);
 
   // Page navigation with slide animation
   // RTL mushaf: "forward" (next page) = page slides OUT to the right, new page slides IN from left
@@ -409,11 +398,6 @@ export function MushafPageView({
         onTouchEnd={handleTouchEnd}
       >
         <div className={`mushaf-page-wrapper h-full px-2 ${slideClass}`}>
-          <div className="pointer-events-none absolute top-2 right-4 z-20 flex items-center gap-1 rounded-full bg-background/80 px-2 py-0.5 text-[11px] text-muted-foreground shadow-sm border border-border/50">
-            <span>{isArabic ? "اسحب" : "Swipe"}</span>
-            <ChevronRight className="h-3 w-3" />
-          </div>
-
           {isLoading ? (
             <PageSkeleton />
           ) : pageData ? (
@@ -468,7 +452,9 @@ const MushafPageContent = React.memo(function MushafPageContent({
   playerState: any;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const ayahRefs = useRef<Map<number, HTMLSpanElement>>(new Map());
   const [scale, setScale] = useState(1);
+  const [popupPositions, setPopupPositions] = useState<Map<number, 'top' | 'bottom'>>(new Map());
 
   useEffect(() => {
     const adjustScale = () => {
@@ -493,6 +479,23 @@ const MushafPageContent = React.memo(function MushafPageContent({
     window.addEventListener("resize", adjustScale);
     return () => window.removeEventListener("resize", adjustScale);
   }, [page]);
+
+  // Calculate popup positions for selected ayahs
+  useEffect(() => {
+    if (selectedAyah === null) {
+      setPopupPositions(new Map());
+      return;
+    }
+
+    const ayahEl = ayahRefs.current.get(selectedAyah);
+    if (ayahEl && contentRef.current) {
+      const containerRect = contentRef.current.getBoundingClientRect();
+      const ayahRect = ayahEl.getBoundingClientRect();
+      const isNearTop = ayahRect.top - containerRect.top < 100; // 100px from top threshold
+      
+      setPopupPositions(new Map([[selectedAyah, isNearTop ? 'bottom' : 'top']]));
+    }
+  }, [selectedAyah]);
 
   const surahGroups: {
     surahNumber: number;
@@ -555,9 +558,14 @@ const MushafPageContent = React.memo(function MushafPageContent({
                 playerState.isPlaying;
               const isActiveVerse = playerState.activeVerseKey === verseKey;
 
+              const popupPosition = popupPositions.get(ayah.number) || 'top';
+
               return (
                 <span
                   key={ayah.number}
+                  ref={(el) => {
+                    if (el) ayahRefs.current.set(ayah.number, el);
+                  }}
                   className={`inline relative ${
                     isHighlighted ? "mushaf-highlight" : ""
                   } ${isSelected ? "bg-primary/15 rounded" : ""} ${
@@ -581,10 +589,12 @@ const MushafPageContent = React.memo(function MushafPageContent({
                     ﴿{toArabicNumber(ayah.numberInSurah)}﴾
                   </span>
 
-                  {/* Floating actions on selected verse */}
+                  {/* Floating actions on selected verse - smart positioning */}
                   {isSelected && (
                     <span
-                      className="absolute -top-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 bg-background shadow-lg rounded-full px-1.5 py-0.5 border border-border/60"
+                      className={`absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 bg-background shadow-lg rounded-full px-1.5 py-0.5 border border-border/60 ${
+                        popupPosition === 'bottom' ? 'top-full mt-1' : '-top-8'
+                      }`}
                       dir="ltr"
                       onClick={(e) => e.stopPropagation()}
                     >

@@ -92,7 +92,7 @@ async function createNotificationChannel(): Promise<void> {
 export function useAzanScheduler() {
     const { coordinates } = useLocation();
     const { settings } = useSettings();
-    const { prayerOffset, dstMode, calculationMethod, language } = settings;
+    const { prayerOffset, dstMode, calculationMethod, language, azanMode, includeIshraq } = settings;
     const isArabic = language === 'ar';
 
     const scheduleAzanAlarms = useCallback(async () => {
@@ -132,7 +132,8 @@ export function useAzanScheduler() {
                     coordinates.latitude,
                     coordinates.longitude,
                     totalOffset,
-                    calculationMethod
+                    calculationMethod,
+                    includeIshraq
                 );
                 allPrayers.push(...dayPrayers);
             }
@@ -149,8 +150,12 @@ export function useAzanScheduler() {
                     ? `حان الآن وقت صلاة ${prayerName.ar}`
                     : `It's time for ${prayerName.en} prayer`;
                 const body = isArabic
-                    ? 'حي على الصلاة، حي على الفلاح'
-                    : 'Come to prayer, come to success';
+                    ? (azanMode === 'full' ? 'حي على الصلاة، حي على الفلاح' : 'تذكير بالصلاة')
+                    : (azanMode === 'full' ? 'Come to prayer, come to success' : 'Prayer reminder');
+
+                // Skip sound for silent mode, or use default notification sound
+                const sound = azanMode === 'full' ? 'azan.mp3' : undefined;
+                const channel = azanMode === 'full' ? CHANNEL_ID : 'prayer_reminder';
 
                 return {
                     id: 1000 + index, // Use unique IDs in 1000+ range to avoid conflicts
@@ -160,8 +165,8 @@ export function useAzanScheduler() {
                         at: prayer.date,
                         allowWhileIdle: true, // CRITICAL: Fire notification during Doze mode
                     },
-                    channelId: CHANNEL_ID,
-                    sound: 'azan.mp3', // Uses res/raw/azan.mp3 via channel
+                    channelId: channel,
+                    sound: sound,
                     smallIcon: 'ic_stat_icon_config_sample',
                     largeIcon: 'ic_launcher',
                     ongoing: false,

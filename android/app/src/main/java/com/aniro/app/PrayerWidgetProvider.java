@@ -235,4 +235,9 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             default: return "";
         }
     }
+
+    // Helper to get Ishraq time (20 min after sunrise)
+    private static Date getIshraqTime(PrayerTimes times) {
+        return new Date(times.sunrise.getTime() + 20 * 60 * 1000);
+    }
 }
