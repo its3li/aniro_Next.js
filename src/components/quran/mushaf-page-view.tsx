@@ -100,32 +100,6 @@ export function MushafPageView({
     };
   }, [currentPage, edition]);
 
-  // Save Last Read (debounced)
-  useEffect(() => {
-    if (!pageData || pageData.pageNumber !== currentPage) return;
-
-    const timer = setTimeout(() => {
-      const firstAyah = pageData.ayahs[0];
-      // Find majority surah on page if multiple? No, first ayah is standard for resume.
-      // But if page starts middle of surah, firstAyah is correct.
-
-      const hizbInfo = getHizbInfo(pageData.hizbQuarter, "en");
-
-      saveLastRead({
-        surahName: firstAyah.surah.englishName,
-        surahNameAr: firstAyah.surah.name,
-        surahNumber: firstAyah.surah.number,
-        verseNumber: firstAyah.numberInSurah,
-        pageNumber: currentPage,
-        juzNumber: pageData.juz,
-        hizbNumber: hizbInfo.hizbNumber,
-        timestamp: Date.now(),
-      });
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [currentPage, pageData, saveLastRead]);
-
   // Highlight initial verse
   useEffect(() => {
     if (initialVerseNumber && pageData) {
