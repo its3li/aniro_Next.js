@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   getPageData,
   getPageRange,
@@ -19,6 +20,7 @@ import { parseTajweed, stripTajweed } from "@/lib/tajweed";
 import { useSettings } from "../providers/settings-provider";
 import { Skeleton } from "../ui/skeleton";
 import { TajweedLegend } from "./tajweed-legend";
+import { TafseerModal } from "./tafseer-modal";
 import { useToast } from "@/hooks/use-toast";
 import {
   Play,
@@ -27,6 +29,7 @@ import {
   PlayCircle,
   PauseCircle,
   BookmarkPlus,
+  BookOpen,
 } from "lucide-react";
 import { useAudioPlayer } from "../providers/audio-player-provider";
 import { useLastRead } from "@/hooks/use-last-read";
@@ -62,6 +65,8 @@ export function MushafPageView({
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAyah, setSelectedAyah] = useState<number | null>(null);
   const [highlightedAyah, setHighlightedAyah] = useState<number | null>(null);
+  const [selectedAyahForTafseer, setSelectedAyahForTafseer] = useState<PageAyah | null>(null);
+  const [isTafseerOpen, setTafseerOpen] = useState(false);
 
   // Swipe
   const containerRef = useRef<HTMLDivElement>(null);
@@ -269,6 +274,16 @@ export function MushafPageView({
     [currentPage, isArabic, pageData, saveLastRead, toast]
   );
 
+  // Tafseer handler - opens bottom sheet
+  const handleTafseerVerse = useCallback(
+    (ayah: PageAyah) => {
+      setSelectedAyahForTafseer(ayah);
+      setTafseerOpen(true);
+      setSelectedAyah(null);
+    },
+    []
+  );
+
   // Play all verses on current page continuously
   const handlePlayPage = useCallback(() => {
     if (!pageData) return;
@@ -408,9 +423,7 @@ export function MushafPageView({
               selectedAyah={selectedAyah}
               highlightedAyah={highlightedAyah}
               onVerseTap={handleVerseTap}
-              onCopy={handleCopyVerse}
-              onPlay={handlePlayVerse}
-              onBookmark={handleBookmarkVerse}
+              setSelectedAyah={setSelectedAyah}
               playerState={playerState}
             />
           ) : (
@@ -420,6 +433,37 @@ export function MushafPageView({
           )}
         </div>
       </div>
+
+      {/* Portal-based popup — outside scaled container, guaranteed to work */}
+      {pageData && selectedAyah !== null && typeof window !== 'undefined' && createPortal(
+        <AyahPopup 
+          page={pageData}
+          selectedAyah={selectedAyah}
+          isArabic={isArabic}
+          playerState={playerState}
+          onPlay={handlePlayVerse}
+          onCopy={handleCopyVerse}
+          onBookmark={handleBookmarkVerse}
+          onTafseer={handleTafseerVerse}
+          onClose={() => setSelectedAyah(null)}
+        />,
+        document.body
+      )}
+
+      {/* Tafseer Modal */}
+      {selectedAyahForTafseer && (
+        <TafseerModal
+          verse={{
+            number: { inQuran: selectedAyahForTafseer.number, inSurah: selectedAyahForTafseer.numberInSurah },
+            text: selectedAyahForTafseer.text,
+            translation: "",
+          }}
+          surahName={isArabic ? selectedAyahForTafseer.surah.name : selectedAyahForTafseer.surah.englishName}
+          surahNumber={selectedAyahForTafseer.surah.number}
+          isOpen={isTafseerOpen}
+          onClose={() => setTafseerOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -435,9 +479,7 @@ const MushafPageContent = React.memo(function MushafPageContent({
   selectedAyah,
   highlightedAyah,
   onVerseTap,
-  onCopy,
-  onPlay,
-  onBookmark,
+  setSelectedAyah,
   playerState,
 }: {
   page: MushafPage;
@@ -446,15 +488,12 @@ const MushafPageContent = React.memo(function MushafPageContent({
   selectedAyah: number | null;
   highlightedAyah: number | null;
   onVerseTap: (ayah: PageAyah) => void;
-  onCopy: (ayah: PageAyah) => void;
-  onPlay: (ayah: PageAyah) => void;
-  onBookmark: (ayah: PageAyah) => void;
+  setSelectedAyah: (ayah: number | null) => void;
   playerState: any;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const ayahRefs = useRef<Map<number, HTMLSpanElement>>(new Map());
   const [scale, setScale] = useState(1);
-  const [popupPositions, setPopupPositions] = useState<Map<number, 'top' | 'bottom'>>(new Map());
 
   useEffect(() => {
     const adjustScale = () => {
@@ -480,22 +519,12 @@ const MushafPageContent = React.memo(function MushafPageContent({
     return () => window.removeEventListener("resize", adjustScale);
   }, [page]);
 
-  // Calculate popup positions for selected ayahs
+  // Close popup on scroll
   useEffect(() => {
-    if (selectedAyah === null) {
-      setPopupPositions(new Map());
-      return;
-    }
-
-    const ayahEl = ayahRefs.current.get(selectedAyah);
-    if (ayahEl && contentRef.current) {
-      const containerRect = contentRef.current.getBoundingClientRect();
-      const ayahRect = ayahEl.getBoundingClientRect();
-      const isNearTop = ayahRect.top - containerRect.top < 100; // 100px from top threshold
-      
-      setPopupPositions(new Map([[selectedAyah, isNearTop ? 'bottom' : 'top']]));
-    }
-  }, [selectedAyah]);
+    const handleScroll = () => setSelectedAyah(null);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [setSelectedAyah]);
 
   const surahGroups: {
     surahNumber: number;
@@ -558,11 +587,10 @@ const MushafPageContent = React.memo(function MushafPageContent({
                 playerState.isPlaying;
               const isActiveVerse = playerState.activeVerseKey === verseKey;
 
-              const popupPosition = popupPositions.get(ayah.number) || 'top';
-
               return (
                 <span
                   key={ayah.number}
+                  data-ayah-number={ayah.number}
                   ref={(el) => {
                     if (el) ayahRefs.current.set(ayah.number, el);
                   }}
@@ -588,46 +616,140 @@ const MushafPageContent = React.memo(function MushafPageContent({
                   <span className="inline-flex items-center justify-center mx-0.5 text-primary font-sans text-[0.6rem] align-middle select-none">
                     ﴿{toArabicNumber(ayah.numberInSurah)}﴾
                   </span>
-
-                  {/* Floating actions on selected verse - smart positioning */}
-                  {isSelected && (
-                    <span
-                      className={`absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 bg-background shadow-lg rounded-full px-1.5 py-0.5 border border-border/60 ${
-                        popupPosition === 'bottom' ? 'top-full mt-1' : '-top-8'
-                      }`}
-                      dir="ltr"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        className="w-6 h-6 flex items-center justify-center rounded-full active:bg-foreground/10"
-                        onClick={() => onPlay(ayah)}
-                      >
-                        {isPlaying ? (
-                          <Pause className="w-3 h-3" />
-                        ) : (
-                          <Play className="w-3 h-3" />
-                        )}
-                      </button>
-                      <button
-                        className="w-6 h-6 flex items-center justify-center rounded-full active:bg-foreground/10"
-                        onClick={() => onCopy(ayah)}
-                      >
-                        <Copy className="w-3 h-3" />
-                      </button>
-                      <button
-                        className="w-6 h-6 flex items-center justify-center rounded-full active:bg-foreground/10"
-                        onClick={() => onBookmark(ayah)}
-                      >
-                        <BookmarkPlus className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
                 </span>
               );
             })}
           </div>
         ))}
       </div>
+    </div>
+  );
+});
+
+// Portal-based popup component — outside any scaled containers
+const AyahPopup = React.memo(function AyahPopup({
+  page,
+  selectedAyah,
+  isArabic,
+  playerState,
+  onPlay,
+  onCopy,
+  onBookmark,
+  onTafseer,
+  onClose,
+}: {
+  page: MushafPage;
+  selectedAyah: number;
+  isArabic: boolean;
+  playerState: any;
+  onPlay: (ayah: PageAyah) => void;
+  onCopy: (ayah: PageAyah) => void;
+  onBookmark: (ayah: PageAyah) => void;
+  onTafseer: (ayah: PageAyah) => void;
+  onClose: () => void;
+}) {
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    // Find the selected ayah element
+    const findAndPosition = () => {
+      const ayah = page.ayahs.find(a => a.number === selectedAyah);
+      if (!ayah) return;
+
+      // Try to find element by data attribute
+      const ayahEl = document.querySelector(`[data-ayah-number="${selectedAyah}"]`) as HTMLElement;
+      if (ayahEl) {
+        const rect = ayahEl.getBoundingClientRect();
+        const popupWidth = 160;
+        const popupHeight = 44;
+        const padding = 8;
+        
+        // Center horizontally, clamp to screen edges
+        let left = rect.left + (rect.width / 2) - (popupWidth / 2);
+        left = Math.max(padding, Math.min(left, window.innerWidth - popupWidth - padding));
+        
+        // Position above the verse, or below if not enough space
+        const spaceAbove = rect.top;
+        const top = spaceAbove < popupHeight + padding + 50
+          ? rect.bottom + padding  // Below if not enough space above
+          : rect.top - popupHeight - padding;  // Above normally
+        
+        setPosition({ top, left });
+      }
+    };
+
+    // Run immediately and after a short delay to ensure DOM is ready
+    findAndPosition();
+    const timeout = setTimeout(findAndPosition, 50);
+    
+    // Update on resize
+    window.addEventListener('resize', findAndPosition);
+    
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('resize', findAndPosition);
+    };
+  }, [selectedAyah, page]);
+
+  const ayah = page.ayahs.find(a => a.number === selectedAyah);
+  if (!ayah || !position) return null;
+
+  const verseKey = `${ayah.surah.number}:${ayah.numberInSurah}`;
+  const isPlaying = playerState.activeVerseKey === verseKey && playerState.isPlaying;
+
+  return (
+    <div
+      className="fixed z-[9999] flex items-center gap-1 bg-background/95 backdrop-blur-sm shadow-xl rounded-full px-2 py-1.5 border border-border"
+      style={{
+        top: Math.max(8, position.top),
+        left: position.left,
+        width: '160px',
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      }}
+    >
+      <button 
+        className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary/10 active:bg-primary/20 transition-colors outline-none focus:outline-none" 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          e.preventDefault();
+          onPlay(ayah); 
+        }}
+      >
+        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+      </button>
+      <button 
+        className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary/10 active:bg-primary/20 transition-colors outline-none focus:outline-none" 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          e.preventDefault();
+          onCopy(ayah); 
+        }}
+      >
+        <Copy className="w-4 h-4" />
+      </button>
+      <button 
+        className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary/10 active:bg-primary/20 transition-colors outline-none focus:outline-none" 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          e.preventDefault();
+          onBookmark(ayah); 
+        }}
+      >
+        <BookmarkPlus className="w-4 h-4" />
+      </button>
+      <button 
+        className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary/10 active:bg-primary/20 transition-colors outline-none focus:outline-none" 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          e.preventDefault();
+          onTafseer(ayah); 
+        }}
+      >
+        <BookOpen className="w-4 h-4" />
+      </button>
     </div>
   );
 });

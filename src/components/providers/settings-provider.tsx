@@ -82,6 +82,8 @@ const SettingsProviderContext = createContext<SettingsProviderState>({
   setWidgetTheme: () => null,
   setWidgetBackgroundColor: () => null,
   setAppTheme: () => null,
+  setAzanMode: () => null,
+  setIncludeIshraq: () => null,
   availableReciters: availableReciters,
 });
 
@@ -141,10 +143,25 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       try {
         // @ts-ignore
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.WidgetData) {
+          // Get cached location from localStorage (set by useLocation hook)
+          let latitude = 21.4225; // Default: Mecca (Kaaba)
+          let longitude = 39.8262;
+          
+          try {
+            const cached = localStorage.getItem('aniro_location');
+            if (cached) {
+              const loc = JSON.parse(cached);
+              if (loc.latitude && loc.longitude) {
+                latitude = loc.latitude;
+                longitude = loc.longitude;
+              }
+            }
+          } catch {}
+          
           // @ts-ignore
           await window.Capacitor.Plugins.WidgetData.updateData({
-            latitude: 21.4225, // TODO: Get real location if available in settings or separate hook
-            longitude: 39.8262,
+            latitude,
+            longitude,
             calculationMethod: settings.calculationMethod,
             prayerOffset: settings.prayerOffset,
             dstMode: settings.dstMode,

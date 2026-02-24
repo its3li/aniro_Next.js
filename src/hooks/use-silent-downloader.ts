@@ -81,7 +81,6 @@ async function downloadAndSaveSurah(surahId: number): Promise<boolean> {
     try {
         // Check if already downloaded
         if (await isSurahDownloaded(surahId)) {
-            console.log(`[SilentDownloader] Surah ${surahId} already downloaded, skipping`);
             return true;
         }
 
@@ -104,7 +103,6 @@ async function downloadAndSaveSurah(surahId: number): Promise<boolean> {
         // Update last downloaded marker
         await setLastDownloadedSurah(surahId);
 
-        console.log(`[SilentDownloader] Downloaded and saved Surah ${surahId}: ${surahData.englishName}`);
         return true;
     } catch (error) {
         console.error(`[SilentDownloader] Failed to download Surah ${surahId}:`, error);
@@ -133,24 +131,20 @@ export function useSilentDownloader() {
     const startDownloadLoop = useCallback(async () => {
         // Prevent multiple loops from running
         if (isDownloadingRef.current) {
-            console.log('[SilentDownloader] Download loop already running');
             return;
         }
 
         isDownloadingRef.current = true;
         shouldContinueRef.current = true;
 
-        console.log('[SilentDownloader] Starting download loop...');
 
         try {
             // Get the last downloaded Surah to resume from
             const lastDownloaded = await getLastDownloadedSurah();
             const startFrom = lastDownloaded + 1;
 
-            console.log(`[SilentDownloader] Resuming from Surah ${startFrom}`);
 
             if (startFrom > TOTAL_SURAHS) {
-                console.log('[SilentDownloader] All Surahs already downloaded!');
                 isDownloadingRef.current = false;
                 return;
             }
@@ -159,7 +153,6 @@ export function useSilentDownloader() {
             for (let surahId = startFrom; surahId <= TOTAL_SURAHS; surahId++) {
                 // Check if we should stop (app closed, etc.)
                 if (!shouldContinueRef.current) {
-                    console.log('[SilentDownloader] Download loop stopped');
                     break;
                 }
 
@@ -167,7 +160,6 @@ export function useSilentDownloader() {
 
                 if (!success) {
                     // Network error - wait and retry
-                    console.log(`[SilentDownloader] Will retry Surah ${surahId} in 5 seconds...`);
 
                     await new Promise<void>((resolve) => {
                         retryTimeoutRef.current = setTimeout(() => {
@@ -184,7 +176,6 @@ export function useSilentDownloader() {
                 await new Promise((resolve) => setTimeout(resolve, 200));
             }
 
-            console.log('[SilentDownloader] Download loop completed');
         } catch (error) {
             console.error('[SilentDownloader] Download loop error:', error);
         } finally {
@@ -213,7 +204,6 @@ export function useSilentDownloader() {
 
         if (Capacitor.isNativePlatform()) {
             App.addListener('appStateChange', (state: AppState) => {
-                console.log('[SilentDownloader] App state changed:', state.isActive ? 'FOREGROUND' : 'BACKGROUND');
 
                 if (state.isActive) {
                     // App came to foreground - resume downloading
@@ -229,14 +219,12 @@ export function useSilentDownloader() {
 
         // Handle online/offline events
         const handleOnline = () => {
-            console.log('[SilentDownloader] Network restored - resuming download');
             if (!isDownloadingRef.current) {
                 startDownloadLoop();
             }
         };
 
         const handleOffline = () => {
-            console.log('[SilentDownloader] Network lost - pausing download');
             stopDownloadLoop();
         };
 
@@ -288,5 +276,4 @@ export async function getDownloadProgress(): Promise<{ downloaded: number; total
  */
 export async function resetDownloadProgress(): Promise<void> {
     await setLastDownloadedSurah(0);
-    console.log('[SilentDownloader] Download progress reset');
 }

@@ -102,17 +102,45 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (startVerseIndex >= surah.verses.length) return;
 
     const versesToQueue = surah.verses.slice(startVerseIndex, startVerseIndex + 5);
-    const currentReciter = reciterRef.current; // Use ref to get latest value
+    const currentReciter = reciterRef.current;
+
+    // Open cache for audio files
+    const cache = await caches.open('quran-audio-cache').catch(() => null);
 
     const promises = versesToQueue.map(async (verse) => {
       try {
         const verseRef = `${surah.number}:${verse.number.inSurah}`;
-        const apiResponse = await fetch(`https://api.alquran.cloud/v1/ayah/${verseRef}/${currentReciter}`);
-        if (!apiResponse.ok) return null;
-        const data = await apiResponse.json();
-        if (data.code !== 200 || !data.data.audio) return null;
+        const apiUrl = `https://api.alquran.cloud/v1/ayah/${verseRef}/${currentReciter}`;
+        
+        // Try cache first
+        let audioUrl: string | null = null;
+        
+        if (cache) {
+          const cachedResponse = await cache.match(apiUrl);
+          if (cachedResponse) {
+            const data = await cachedResponse.json();
+            if (data.data?.audio) {
+              audioUrl = data.data.audio;
+            }
+          }
+        }
+        
+        // If not in cache, fetch from API
+        if (!audioUrl) {
+          const apiResponse = await fetch(apiUrl);
+          if (!apiResponse.ok) return null;
+          const data = await apiResponse.json();
+          if (data.code !== 200 || !data.data.audio) return null;
+          
+          // Store in cache
+          if (cache) {
+            await cache.put(apiUrl, new Response(JSON.stringify(data)));
+          }
+          
+          audioUrl = data.data.audio;
+        }
 
-        return { verseKey: verseRef, url: data.data.audio };
+        return { verseKey: verseRef, url: audioUrl };
       } catch {
         return null;
       }
@@ -125,7 +153,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
     audioQueueRef.current.push(...newItems);
 
-  }, []); // No dependency on quranReciter - we use ref instead
+  }, []);
 
   const playNextInQueue = useCallback(async () => {
     if (isPlayingAudioRef.current) return;

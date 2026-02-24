@@ -20,7 +20,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     const router = useRouter();
     const [query, setQuery] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
-    const { search, searchResults, clearResults, isIndexing, isIndexed, prebuildIndex } = useQuranSearch();
+    const { search, searchResults, clearResults, isIndexing, isIndexed } = useQuranSearch();
     const { settings } = useSettings();
     const isArabic = settings.language === 'ar';
 
@@ -41,10 +41,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => inputRef.current?.focus(), 100);
-            // Pre-build index when modal opens
-            prebuildIndex();
         }
-    }, [isOpen, prebuildIndex]);
+    }, [isOpen]);
 
     // Handle result selection - navigate to the verse
     const handleResultSelect = useCallback(

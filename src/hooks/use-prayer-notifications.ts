@@ -60,7 +60,6 @@ export function usePrayerNotifications() {
 
                 if (notifications.length > 0) {
                     await LocalNotifications.schedule({ notifications });
-                    console.log('Scheduled notifications:', notifications.length);
                 }
 
             } catch (error) {

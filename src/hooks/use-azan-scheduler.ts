@@ -43,7 +43,6 @@ export async function checkAndRequestPermissions(): Promise<{
         // For now, we assume it's granted if the user has followed setup instructions.
         // A more robust solution would use a native plugin to check AlarmManager.canScheduleExactAlarms()
 
-        console.log('[AzanScheduler] Permissions check result:', result);
         return result;
     } catch (error) {
         console.error('[AzanScheduler] Permission check failed:', error);
@@ -73,10 +72,8 @@ async function createNotificationChannel(): Promise<void> {
         };
 
         await LocalNotifications.createChannel(channel);
-        console.log('[AzanScheduler] Notification channel created:', CHANNEL_ID);
     } catch (error) {
         // Channel may already exist (created by MainActivity), which is fine
-        console.log('[AzanScheduler] Channel creation (may already exist):', error);
     }
 }
 
@@ -97,7 +94,6 @@ export function useAzanScheduler() {
 
     const scheduleAzanAlarms = useCallback(async () => {
         if (!coordinates) {
-            console.log('[AzanScheduler] Waiting for coordinates...');
             return;
         }
 
@@ -116,7 +112,6 @@ export function useAzanScheduler() {
             const pending = await LocalNotifications.getPending();
             if (pending.notifications.length > 0) {
                 await LocalNotifications.cancel(pending);
-                console.log('[AzanScheduler] Cancelled', pending.notifications.length, 'existing notifications');
             }
 
             const now = new Date();
@@ -180,10 +175,7 @@ export function useAzanScheduler() {
 
             if (notifications.length > 0) {
                 await LocalNotifications.schedule({ notifications } as ScheduleOptions);
-                console.log('[AzanScheduler] Scheduled', notifications.length, 'Azan notifications');
-                console.log('[AzanScheduler] Next prayer:', upcomingPrayers[0].name, 'at', upcomingPrayers[0].date.toLocaleTimeString());
             } else {
-                console.log('[AzanScheduler] No upcoming prayers to schedule');
             }
 
         } catch (error) {
@@ -197,7 +189,6 @@ export function useAzanScheduler() {
 
         // Re-schedule when app resumes from background
         const handleResume = () => {
-            console.log('[AzanScheduler] App resumed - rescheduling notifications');
             scheduleAzanAlarms();
         };
 
